@@ -12,6 +12,8 @@ This program will take information VIA a database and utilize Machine learning t
 
 4. Use python to execute SQL queries, convert results to dataframes and calculate trends
 
-5. Label churn behaviours
+5. Train ML model to spot and predict churn
+   
+6. Label churn behaviours
 
-6. Train ML model to spot and predict churn
+7. Send an alert containing the users that are predicted to have a change of churning and the specific point of concern for each marked user
