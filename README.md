@@ -16,4 +16,4 @@ This program will take information VIA a database and utilize Machine learning t
    
 6. Label churn behaviours
 
-7. Send an alert containing the users that are predicted to have a change of churning and the specific point of concern for each marked user
+7. Send an alert containing the users that are predicted to churn in the near future
