@@ -10,9 +10,9 @@ This program will take information VIA a database and utilize Machine learning t
 
 3. Create SQL Queries
 
-4. Use python to execute SQL queries, convert results to dataframes and calculate trends
+4. Use python to convert query results to dataframes and calculate trends
 
-5. Train ML model to spot and predict churn
+5. Train Logistic Regression ML model to spot and predict churn
    
 6. Label churn behaviours
 
