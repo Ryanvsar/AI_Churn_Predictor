@@ -11,17 +11,17 @@ into Logistic Regression model to predict churn
 """
 import sqlite3
 import pandas as pd
+from dbConfig import DB_PATH
 import numpy as np
-from usageSimulation import churn_user_ids
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, roc_auc_score
 
-def runModel():
+def runModel(churn_user_ids):
     CURRENT_DATE = 20250331
 
-    conn = sqlite3.connect("app_usage.db")
+    conn = sqlite3.connect(DB_PATH)
 
     query = """
     SELECT
@@ -37,7 +37,19 @@ def runModel():
 
     df = pd.read_sql_query(query, conn)
 
-    print(df.head())
+    pd.set_option("display.float_format", "{:.6f}".format)
+    pd.set_option("display.max_rows", None)
+    pd.set_option("display.width", None)
+
+    print("\n--- User Usage Summary ---")
+    print(df[[
+        "userId",
+        "total_sessions",
+        "avg_session_length",
+        "avg_session_events",
+        "last_session_date",
+        "first_session_date"
+    ]].sort_values("userId").to_string(index=False))
 
     trend_query = """
     SELECT
@@ -65,7 +77,8 @@ def runModel():
     df["session_length_change"] = df["session_length_change"].fillna(0)
     df["session_event_change"] = df["session_event_change"].fillna(0)
 
-    print(df["churn"].value_counts())
+    print("\nchurn")
+    print(df["churn"].value_counts().sort_index())
 
     FEATURES = [
         "avg_session_length",
@@ -119,4 +132,8 @@ def runModel():
     top_risk_users = df.sort_values("churn_probability", ascending=False).head(15)
 
     print("\n--- Top At-Risk Users ---")
-    print(top_risk_users[["userId", "churn_probability"]])
+    print(
+    top_risk_users[["userId", "churn_probability"]]
+    .round(6)
+    .to_string(index=False)
+    )
