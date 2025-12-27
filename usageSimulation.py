@@ -83,7 +83,5 @@ def generate_users():
     print()
     print("--------------------------")
     print()
-    from pprint import pprint
 
-    pprint(Users)
-    return Users
+    return Users, churn_user_ids
