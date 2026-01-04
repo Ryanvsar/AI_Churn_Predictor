@@ -39,10 +39,10 @@ def save_to_db():
     for user in users.values():
         cursor.execute(
             """
-            INSERT OR IGNORE INTO users (userId, churnPred)
+            INSERT OR REPLACE INTO users (userId, churnLabel)
             VALUES (?, ?)
             """,
-            (user["userId"], user["churnPred"])
+            (user["userId"], 1 if user["userId"] in churn_user_ids else 0)
         )
 
     # Insert sessions
@@ -67,7 +67,7 @@ def save_to_db():
                     session["sessionEvents"]
                 )
             )
-
+    
     conn.commit()
     conn.close()
     return users, churn_user_ids

@@ -41,7 +41,7 @@ def runModel(churn_user_ids):
     pd.set_option("display.max_rows", None)
     pd.set_option("display.width", None)
 
-    print("\n--- User Usage Summary ---")
+    """print("\n--- User Usage Summary ---")
     print(df[[
         "userId",
         "total_sessions",
@@ -49,7 +49,7 @@ def runModel(churn_user_ids):
         "avg_session_events",
         "last_session_date",
         "first_session_date"
-    ]].sort_values("userId").to_string(index=False))
+    ]].sort_values("userId").to_string(index=False))"""
 
     trend_query = """
     SELECT
@@ -99,7 +99,7 @@ def runModel(churn_user_ids):
     X_train, X_test, y_train, y_test = train_test_split(
         X_scaled,
         y,
-        test_size=0.25,
+        test_size=0.99,
         stratify=y,
         random_state=42
     )
@@ -129,7 +129,7 @@ def runModel(churn_user_ids):
     df["churn_probability"] = model.predict_proba(X_scaled)[:, 1]
 
     # Show highest-risk users
-    top_risk_users = df.sort_values("churn_probability", ascending=False).head(15)
+    top_risk_users = df.sort_values("churn_probability", ascending=False).head(50)
 
     print("\n--- Top At-Risk Users ---")
     print(

@@ -1,9 +1,12 @@
-CREATE TABLE IF NOT EXISTS users (
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS sessions;
+
+CREATE TABLE users (
     userId INTEGER PRIMARY KEY,
-    churnPred TEXT
+    churnLabel INTEGER
 );
 
-CREATE TABLE IF NOT EXISTS sessions (
+CREATE TABLE sessions (
     sessionId TEXT PRIMARY KEY,
     userId INTEGER,
     sessionDate INTEGER,
