@@ -18,5 +18,5 @@ from collectAndPredict import runModel
 # runModel(churn_user_ids)
 
 # * * Run usageSimulation2(Medium - 5000 users) * *
-_, churn_user_ids, _ = save_to_db2()
-runModel(churn_user_ids)
+_, churned_user_ids, _ = save_to_db2()
+runModel(churned_user_ids)

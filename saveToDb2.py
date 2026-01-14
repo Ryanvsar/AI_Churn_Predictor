@@ -77,7 +77,4 @@ def save_to_db2():
     conn.commit()
     conn.close()
 
-    print("\n--- Database Load Complete ---")
-    print(f"Users inserted: {len(users)}")
-
     return users, churned_user_ids, at_risk_user_ids

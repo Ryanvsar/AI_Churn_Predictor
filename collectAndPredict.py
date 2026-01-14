@@ -10,130 +10,226 @@ into Logistic Regression model to predict churn
 ------------------------------------------------------
 """
 import sqlite3
+import numpy as np
 import pandas as pd
 from dbConfig import DB_PATH
-import numpy as np
+
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, roc_auc_score
+from sklearn.metrics import classification_report, roc_auc_score, confusion_matrix
+
+
+from xgboost import XGBClassifier
+import warnings
+warnings.filterwarnings("ignore")
+
 
 def runModel(churn_user_ids):
-    CURRENT_DATE = 20250331
+
+    # --------------------------------------------------
+    # Observation window
+    # --------------------------------------------------
+    OBSERVATION_START = 20250101
+    OBSERVATION_END = 20250301  # 60 days
 
     conn = sqlite3.connect(DB_PATH)
 
-    query = """
+    # --------------------------------------------------
+    # Session-level data
+    # --------------------------------------------------
+    sessions_query = f"""
     SELECT
         userId,
-        COUNT(*) AS total_sessions,
-        AVG(sessionLength) AS avg_session_length,
-        AVG(sessionEvents) AS avg_session_events,
-        MAX(sessionDate) AS last_session_date,
-        MIN(sessionDate) AS first_session_date
+        sessionLength,
+        sessionEvents,
+        sessionDate
     FROM sessions
-    GROUP BY userId;
+    WHERE sessionDate >= {OBSERVATION_START}
+      AND sessionDate <= {OBSERVATION_END};
     """
 
-    df = pd.read_sql_query(query, conn)
+    df_sessions = pd.read_sql_query(sessions_query, conn)
 
-    pd.set_option("display.float_format", "{:.6f}".format)
-    pd.set_option("display.max_rows", None)
-    pd.set_option("display.width", None)
+    # --------------------------------------------------
+    # Aggregate per user
+    # --------------------------------------------------
+    df = df_sessions.groupby("userId").agg({
+        "sessionLength": ["mean", "std", "count"],
+        "sessionEvents": ["mean", "std"],
+        "sessionDate": ["min", "max"]
+    }).reset_index()
 
-    """print("\n--- User Usage Summary ---")
-    print(df[[
+    df.columns = [
         "userId",
-        "total_sessions",
         "avg_session_length",
+        "std_session_length",
+        "total_sessions",
         "avg_session_events",
-        "last_session_date",
-        "first_session_date"
-    ]].sort_values("userId").to_string(index=False))"""
+        "std_session_events",
+        "first_session_date",
+        "last_session_date"
+    ]
 
-    trend_query = """
+    # --------------------------------------------------
+    # Trend features (4 periods)
+    # --------------------------------------------------
+    trend_query = f"""
     SELECT
         userId,
-        AVG(CASE WHEN sessionDate <= 20250130 THEN sessionLength END) AS early_len,
-        AVG(CASE WHEN sessionDate >= 20250301 THEN sessionLength END) AS recent_len,
-        AVG(CASE WHEN sessionDate <= 20250130 THEN sessionEvents END) AS early_evt,
-        AVG(CASE WHEN sessionDate >= 20250301 THEN sessionEvents END) AS recent_evt
+
+        AVG(CASE WHEN sessionDate <= 20250115 THEN sessionLength END) AS w1_length,
+        COUNT(CASE WHEN sessionDate <= 20250115 THEN 1 END) AS w1_count,
+
+        AVG(CASE WHEN sessionDate > 20250115 AND sessionDate <= 20250130 THEN sessionLength END) AS w2_length,
+        COUNT(CASE WHEN sessionDate > 20250115 AND sessionDate <= 20250130 THEN 1 END) AS w2_count,
+
+        AVG(CASE WHEN sessionDate > 20250130 AND sessionDate <= 20250214 THEN sessionLength END) AS w3_length,
+        COUNT(CASE WHEN sessionDate > 20250130 AND sessionDate <= 20250214 THEN 1 END) AS w3_count,
+
+        AVG(CASE WHEN sessionDate > 20250214 AND sessionDate <= {OBSERVATION_END} THEN sessionLength END) AS w4_length,
+        COUNT(CASE WHEN sessionDate > 20250214 AND sessionDate <= {OBSERVATION_END} THEN 1 END) AS w4_count
+
     FROM sessions
+    WHERE sessionDate >= {OBSERVATION_START}
+      AND sessionDate <= {OBSERVATION_END}
     GROUP BY userId;
     """
 
     df_trends = pd.read_sql_query(trend_query, conn)
     conn.close()
 
-    df = df.merge(df_trends, on="userId")
+    df = df.merge(df_trends, on="userId", how="left").fillna(0)
 
-    df["session_length_change"] = df["recent_len"] - df["early_len"]
-    df["session_event_change"] = df["recent_evt"] - df["early_evt"]
+    # --------------------------------------------------
+    # Feature engineering
+    # --------------------------------------------------
+    df["length_trend"] = (df["w4_length"] - df["w1_length"]) / (df["w1_length"] + 1)
+    df["frequency_trend"] = (df["w4_count"] - df["w1_count"]) / (df["w1_count"] + 1)
+    df["consistency_score"] = 1 / (df["std_session_length"] + 1)
+    df["engagement_rate"] = df["avg_session_events"] / (df["avg_session_length"] + 1)
+    df["sessions_per_day"] = df["total_sessions"] / 60
 
-    df["days_since_last_session"] = CURRENT_DATE - df["last_session_date"]
-
+    # --------------------------------------------------
+    # Churn label
+    # --------------------------------------------------
     df["churn"] = df["userId"].apply(lambda x: 1 if x in churn_user_ids else 0)
 
-    df["session_length_change"] = df["session_length_change"].fillna(0)
-    df["session_event_change"] = df["session_event_change"].fillna(0)
+    print("\nChurn distribution:")
+    print(df["churn"].value_counts()) #.sort_index())
 
-    print("\nchurn")
-    print(df["churn"].value_counts().sort_index())
-
+    # --------------------------------------------------
+    # Feature selection
+    # --------------------------------------------------
     FEATURES = [
         "avg_session_length",
         "avg_session_events",
         "total_sessions",
-        "session_length_change",
-        "session_event_change",
-        "days_since_last_session"
+        "std_session_length",
+        "length_trend",
+        "frequency_trend",
+        "consistency_score",
+        "engagement_rate"
     ]
 
     X = df[FEATURES]
     y = df["churn"]
 
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    # --------------------------------------------------
+    # Add noise
+    # --------------------------------------------------
+    np.random.seed(42)
+    X_noisy = X + np.random.normal(0, 0.05, X.shape)
 
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_noisy)
+
+    # --------------------------------------------------
     # Train / test split
+    # --------------------------------------------------
     X_train, X_test, y_train, y_test = train_test_split(
         X_scaled,
         y,
-        test_size=0.99,
+        test_size=0.3,
         stratify=y,
         random_state=42
     )
 
-    # Initialize Logistic Regression
-    model = LogisticRegression(
-        max_iter=1000,
-        class_weight="balanced",  # important for churn imbalance
-        random_state=42
+    # --------------------------------------------------
+    # Handle class imbalance
+    # --------------------------------------------------
+    neg, pos = np.bincount(y_train)
+    scale_pos_weight = neg / pos
+
+    # --------------------------------------------------
+    # XGBoost model
+    # --------------------------------------------------
+    model = XGBClassifier(
+        n_estimators=500,
+        max_depth=4,
+        learning_rate=0.05,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        scale_pos_weight=scale_pos_weight,
+        eval_metric="auc",
+        random_state=42,
+        n_jobs=-1
     )
 
-    # Train model
     model.fit(X_train, y_train)
 
-    # Predictions
-    y_pred = model.predict(X_test)
+    # --------------------------------------------------
+    # Evaluation
+    # --------------------------------------------------
     y_prob = model.predict_proba(X_test)[:, 1]
 
-    # Evaluation
-    print("\n--- Model Evaluation ---")
+    THRESHOLD = 0.30
+    y_pred = (y_prob >= THRESHOLD).astype(int)
+
+    print("\n--- Model Evaluation (XGBoost) ---")
     print(classification_report(y_test, y_pred))
     print(f"ROC-AUC Score: {roc_auc_score(y_test, y_prob):.4f}")
 
-    # ------------------------------------------------------
-    # CHURN RISK SCORING FOR ALL USERS
-    # ------------------------------------------------------
+    cm = confusion_matrix(y_test, y_pred)
+    
+    # --------------------------------------------------
+    # Feature importance
+    # --------------------------------------------------
+    feature_importance = pd.DataFrame({
+        "feature": FEATURES,
+        "importance": model.feature_importances_
+    }).sort_values("importance", ascending=False)
+
+    print("\n--- Feature Importance ---")
+    print(feature_importance.to_string(index=False))
+
+    # --------------------------------------------------
+    # Churn probability for all users
+    # --------------------------------------------------
     df["churn_probability"] = model.predict_proba(X_scaled)[:, 1]
 
-    # Show highest-risk users
-    top_risk_users = df.sort_values("churn_probability", ascending=False).head(50)
-
-    print("\n--- Top At-Risk Users ---")
-    print(
-    top_risk_users[["userId", "churn_probability"]]
-    .round(6)
-    .to_string(index=False)
+    at_risk = (
+        df[df["churn"] == 0]
+        .sort_values("churn_probability", ascending=False)
+        .head(10)
     )
+
+    print("\n--- Top 10 At-Risk Users (Not Yet Churned) ---")
+    print(
+        at_risk[
+            ["userId", "churn_probability", "total_sessions",
+             "length_trend", "frequency_trend"]
+        ].round(4).to_string(index=False)
+    )
+
+    # --------------------------------------------------
+    # Distribution diagnostics
+    # --------------------------------------------------
+    non_churned = df[df["churn"] == 0]
+
+    print("\n--- Churn Probability Distribution (Non-Churned) ---")
+    print(f"High risk (>0.7): {len(non_churned[non_churned['churn_probability'] > 0.7])}")
+    print(f"Medium risk (0.4–0.7): {len(non_churned[(non_churned['churn_probability'] >= 0.4) & (non_churned['churn_probability'] <= 0.7)])}")
+    print(f"Low risk (<0.4): {len(non_churned[non_churned['churn_probability'] < 0.4])}")
+
+    print(f"\nMean probability: {non_churned['churn_probability'].mean():.4f}")
+    print(f"Std deviation: {non_churned['churn_probability'].std():.4f}")
