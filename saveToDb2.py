@@ -78,3 +78,7 @@ def save_to_db2():
     conn.close()
 
     return users, churned_user_ids, at_risk_user_ids
+
+
+if __name__ == "__main__":
+    save_to_db2()

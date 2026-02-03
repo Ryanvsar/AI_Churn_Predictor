@@ -71,3 +71,7 @@ def save_to_db():
     conn.commit()
     conn.close()
     return users, churn_user_ids
+
+
+if __name__ == "__main__":
+    save_to_db()
