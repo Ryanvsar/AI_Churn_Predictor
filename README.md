@@ -1,7 +1,7 @@
 #  ML Churn Predictor
 
 A full-stack web application that predicts user churn probability using machine learning. Upload any compatible SQLite database and the dashboard surfaces at-risk users, ranked by churn likelihood — complete with per-user drill-downs, SHAP-powered feature explanations, and aggregate cohort analytics.
-
+ 
 ---
 
 ## 📋 Table of Contents
