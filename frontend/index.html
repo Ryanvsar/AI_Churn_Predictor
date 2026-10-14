@@ -22,12 +22,14 @@
         font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans",
           "Apple Color Emoji", "Segoe UI Emoji";
         background: radial-gradient(1200px 800px at 20% 0%, #13254b 0%, var(--bg) 55%, #070b15 100%);
+        background-color: var(--bg);
         color: var(--text);
+        min-height: 100vh;
       }
       a { color: var(--accent); text-decoration: none; }
-      .container { max-width: 1200px; margin: 0 auto; padding: 18px; }
+      .container { max-width: 1200px; margin: 0 auto; padding: 18px 16px; }
       .topbar {
-        display: flex; align-items: center; justify-content: space-between;
+        display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
         padding: 14px 16px; border: 1px solid var(--border); background: rgba(17, 27, 46, 0.72);
         border-radius: 14px; backdrop-filter: blur(10px);
       }
@@ -38,15 +40,17 @@
         padding: 8px 10px; border-radius: 10px; cursor: pointer;
       }
       .tab.active { background: rgba(96, 165, 250, 0.14); border-color: rgba(96, 165, 250, 0.38); }
-      .grid { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 14px; }
+      .grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 14px; }
       @media (min-width: 980px) { .grid.two { grid-template-columns: 1.1fr 0.9fr; } }
       .card {
         border: 1px solid var(--border);
         background: rgba(15, 23, 42, 0.72);
         border-radius: 14px;
         padding: 14px;
+        min-width: 0;
       }
       .card h3 { margin: 0 0 10px; font-size: 14px; color: var(--muted); font-weight: 600; }
+      .card h4 { margin: 12px 0 8px; font-size: 13px; color: var(--text); font-weight: 600; }
       .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
       input, select {
         background: rgba(2, 6, 23, 0.65);
@@ -54,8 +58,11 @@
         color: var(--text);
         padding: 9px 10px;
         border-radius: 10px;
-        min-width: 240px;
+        min-width: 0;
+        max-width: 100%;
+        box-sizing: border-box;
       }
+      input[type="checkbox"] { padding: 0; }
       button {
         background: rgba(96, 165, 250, 0.18);
         border: 1px solid rgba(96, 165, 250, 0.45);
@@ -65,11 +72,13 @@
         cursor: pointer;
         font-weight: 600;
       }
+      button:disabled { opacity: 0.5; cursor: default; }
       button.secondary {
         background: rgba(148, 163, 184, 0.10);
         border-color: rgba(148, 163, 184, 0.25);
       }
-      .hint { color: var(--muted); font-size: 12px; line-height: 1.35; }
+      button.link { background: none; border: none; color: var(--accent); padding: 0 4px; font-weight: 500; }
+      .hint { color: var(--muted); font-size: 12px; line-height: 1.4; }
       .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
       .pill {
         display: inline-flex; align-items: center; gap: 6px;
@@ -78,70 +87,112 @@
         border-radius: 999px;
         font-size: 12px;
         color: var(--muted);
+        white-space: nowrap;
       }
       .pill.ok { color: var(--ok); border-color: rgba(52, 211, 153, 0.35); background: rgba(52, 211, 153, 0.08); }
       .pill.warn { color: var(--warn); border-color: rgba(251, 191, 36, 0.35); background: rgba(251, 191, 36, 0.08); }
       .pill.danger { color: var(--danger); border-color: rgba(251, 113, 133, 0.35); background: rgba(251, 113, 133, 0.08); }
+      .tableWrap { overflow-x: auto; }
       table { width: 100%; border-collapse: collapse; }
-      th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid rgba(148, 163, 184, 0.12); }
+      th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid rgba(148, 163, 184, 0.12); vertical-align: top; }
       th { color: var(--muted); font-size: 12px; font-weight: 700; }
       tr:hover { background: rgba(96, 165, 250, 0.06); }
       .clickable { cursor: pointer; }
-      .split {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 14px;
-      }
+      .split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
       @media (min-width: 980px) { .split { grid-template-columns: 1fr 1fr; } }
       .metricGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
       @media (min-width: 980px) { .metricGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-      .kv { border: 1px solid rgba(148, 163, 184, 0.16); background: rgba(2, 6, 23, 0.35); padding: 10px; border-radius: 12px; }
-      .kv .k { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
-      .kv .v { font-weight: 700; }
+      .metricGrid.four { }
+      @media (min-width: 980px) { .metricGrid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+      .kv { border: 1px solid rgba(148, 163, 184, 0.16); background: rgba(2, 6, 23, 0.35); padding: 10px; border-radius: 12px; min-width: 0; }
+      .kv .k { color: var(--muted); font-size: 12px; margin-bottom: 6px; overflow-wrap: anywhere; }
+      .kv .v { font-weight: 700; overflow-wrap: anywhere; }
       canvas { width: 100% !important; height: 260px !important; }
-      .error { color: var(--danger); white-space: pre-wrap; }
+      .error { color: var(--danger); white-space: pre-wrap; overflow-wrap: anywhere; }
       .small { font-size: 12px; }
+      .act { border: 1px solid rgba(148, 163, 184, 0.16); border-radius: 12px; padding: 10px; margin-top: 10px; background: rgba(2, 6, 23, 0.3); }
+      .checks { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+      .checks label { font-size: 13px; display: inline-flex; gap: 6px; align-items: center; }
+      .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+      .field > span { font-size: 12px; color: var(--muted); }
+      .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+      .grow { flex: 1 1 320px; }
     </style>
   </head>
   <body>
     <div id="root"></div>
 
     <!-- React 18 (UMD) -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <script>
       const { useEffect, useMemo, useRef, useState } = React;
+      const h = React.createElement;
 
       const API = ""; // same-origin (served by FastAPI)
 
-      function riskPill(tier) {
+      function riskPill(tier, status) {
+        if (status === "churned") return h("span", { className: "pill" }, "Churned");
         const cls = tier === "High" ? "danger" : tier === "Medium" ? "warn" : "ok";
-        return React.createElement("span", { className: `pill ${cls}` }, tier);
+        return h("span", { className: `pill ${cls}` }, tier);
       }
 
-      function fmt(n, digits=4) {
-        if (n === null || n === undefined) return "";
+      function confPill(c) {
+        if (c === null || c === undefined) return null;
+        const cls = c >= 0.8 ? "ok" : c >= 0.6 ? "warn" : "danger";
+        return h("span", { className: `pill ${cls}` }, `confidence ${Math.round(c * 100)}%`);
+      }
+
+      function fmt(n, digits = 4) {
+        if (n === null || n === undefined) return "–";
         const x = Number(n);
         if (Number.isNaN(x)) return String(n);
         return x.toFixed(digits);
       }
 
+      async function request(path, opts) {
+        const res = await fetch(API + path, opts);
+        const txt = await res.text();
+        let json;
+        try { json = txt ? JSON.parse(txt) : null; } catch { json = null; }
+        if (!res.ok) {
+          let detail = json && json.detail;
+          if (Array.isArray(detail)) detail = detail.map(d => d.msg || JSON.stringify(d)).join("; ");
+          throw new Error(detail || txt || `HTTP ${res.status}`);
+        }
+        return json;
+      }
+      const getJson = (path) => request(path);
+      const postJson = (path, body) => request(path, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+
+      function clone(x) { return JSON.parse(JSON.stringify(x)); }
+
       function App() {
         const [tab, setTab] = useState("import");
 
-        const [dbPath, setDbPath] = useState("");
+        const [source, setSource] = useState("");
         const [validateResult, setValidateResult] = useState(null);
         const [validateError, setValidateError] = useState("");
+        const [validating, setValidating] = useState(false);
+        const [schemaMap, setSchemaMap] = useState(null);
+
+        const [churnWindow, setChurnWindow] = useState("");
+        const [labelSource, setLabelSource] = useState("auto");
+        const [runError, setRunError] = useState("");
 
         const [jobId, setJobId] = useState("");
         const [jobStatus, setJobStatus] = useState(null);
 
         const [topN, setTopN] = useState(100);
         const [threshold, setThreshold] = useState(0.4);
+        const [hideChurned, setHideChurned] = useState(true);
         const [users, setUsers] = useState([]);
+        const [usersTotal, setUsersTotal] = useState(0);
         const [usersError, setUsersError] = useState("");
 
         const [selectedUserId, setSelectedUserId] = useState(null);
@@ -153,38 +204,37 @@
         const [aggregates, setAggregates] = useState(null);
         const [aggError, setAggError] = useState("");
 
-        async function postJson(path, body) {
-          const res = await fetch(API + path, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-          });
-          const txt = await res.text();
-          let json;
-          try { json = txt ? JSON.parse(txt) : null; } catch { json = null; }
-          if (!res.ok) {
-            throw new Error((json && json.detail) ? json.detail : txt || `HTTP ${res.status}`);
-          }
-          return json;
+        function changeSource(v) {
+          setSource(v);
+          setValidateResult(null);
+          setSchemaMap(null);
         }
 
-        async function getJson(path) {
-          const res = await fetch(API + path);
-          const txt = await res.text();
-          let json;
-          try { json = txt ? JSON.parse(txt) : null; } catch { json = null; }
-          if (!res.ok) {
-            throw new Error((json && json.detail) ? json.detail : txt || `HTTP ${res.status}`);
-          }
-          return json;
-        }
-
-        async function validateDb() {
+        async function validateDb(src) {
+          const s = src !== undefined ? src : source;
           setValidateError("");
           setValidateResult(null);
+          setSchemaMap(null);
+          setValidating(true);
           try {
-            const out = await postJson("/db/validate", { dbPath });
+            const out = await postJson("/db/validate", { source: s });
             setValidateResult(out);
+            setSchemaMap(clone(out.schemaMap));
+          } catch (e) {
+            setValidateError(String(e.message || e));
+          } finally {
+            setValidating(false);
+          }
+        }
+
+        async function uploadFile(file) {
+          setValidateError("");
+          const fd = new FormData();
+          fd.append("file", file);
+          try {
+            const out = await request("/db/upload", { method: "POST", body: fd });
+            setSource(out.path);
+            await validateDb(out.path);
           } catch (e) {
             setValidateError(String(e.message || e));
           }
@@ -193,6 +243,7 @@
         async function runAnalysis() {
           setUsers([]);
           setUsersError("");
+          setRunError("");
           setJobStatus(null);
           setJobId("");
           setSelectedUserId(null);
@@ -202,345 +253,598 @@
           setAggregates(null);
           setAggError("");
           try {
-            const out = await postJson("/analysis/run", { dbPath, threshold });
+            const body = { source, threshold: Number(threshold), labelSource };
+            if (schemaMap) body.schemaMap = schemaMap;
+            if (String(churnWindow).trim()) body.churnWindowDays = Number(churnWindow);
+            const out = await postJson("/analysis/run", body);
             setJobId(out.jobId);
             setTab("dashboard");
           } catch (e) {
-            setUsersError(String(e.message || e));
+            setRunError(String(e.message || e));
           }
         }
 
-        // poll job status
+        // poll job status until it finishes
         useEffect(() => {
           if (!jobId) return;
           let cancelled = false;
+          let handle = null;
           const tick = async () => {
             try {
               const s = await getJson(`/analysis/jobs/${jobId}`);
               if (cancelled) return;
               setJobStatus(s);
+              if (s.status === "succeeded" || s.status === "failed") clearInterval(handle);
             } catch (e) {
               if (cancelled) return;
               setUsersError(String(e.message || e));
             }
           };
           tick();
-          const h = setInterval(tick, 1000);
-          return () => { cancelled = true; clearInterval(h); };
+          handle = setInterval(tick, 1000);
+          return () => { cancelled = true; clearInterval(handle); };
         }, [jobId]);
+
+        const ready = jobStatus && jobStatus.status === "succeeded";
 
         async function loadUsers() {
           if (!jobId) return;
           setUsersError("");
           try {
-            const out = await getJson(`/analysis/${jobId}/users?top=${encodeURIComponent(topN)}&threshold=${encodeURIComponent(threshold)}&sort=prob_desc`);
+            const q = `top=${encodeURIComponent(topN)}&threshold=${encodeURIComponent(threshold)}&sort=prob_desc&includeChurned=${!hideChurned}`;
+            const out = await getJson(`/analysis/${jobId}/users?${q}`);
             setUsers(out.users || []);
+            setUsersTotal(out.total || 0);
           } catch (e) {
             setUsersError(String(e.message || e));
           }
         }
 
         useEffect(() => {
-          if (!jobId) return;
-          if (!jobStatus || jobStatus.status !== "succeeded") return;
+          if (!jobId || !ready) return;
           loadUsers();
-        }, [jobId, jobStatus, topN, threshold]);
+        }, [jobId, ready, topN, threshold, hideChurned]);
 
         async function loadUser(userId) {
           if (!jobId) return;
+          const uid = encodeURIComponent(userId);
           setSelectedUserId(userId);
           setUserError("");
           setUserDetails(null);
           setUserExplain(null);
           setUserSeries(null);
+          setTab("user");
           try {
             const [d, e, ts] = await Promise.all([
-              getJson(`/analysis/${jobId}/users/${userId}`),
-              getJson(`/analysis/${jobId}/users/${userId}/explain`),
-              getJson(`/analysis/${jobId}/users/${userId}/timeseries`),
+              getJson(`/analysis/${jobId}/users/${uid}`),
+              getJson(`/analysis/${jobId}/users/${uid}/explain`),
+              getJson(`/analysis/${jobId}/users/${uid}/timeseries`),
             ]);
             setUserDetails(d);
             setUserExplain(e);
             setUserSeries(ts);
-            setTab("user");
           } catch (err) {
             setUserError(String(err.message || err));
           }
         }
 
-        async function loadAggregates() {
-          if (!jobId) return;
-          setAggError("");
-          setAggregates(null);
-          try {
-            const out = await getJson(`/analysis/${jobId}/aggregates`);
-            setAggregates(out);
-          } catch (e) {
-            setAggError(String(e.message || e));
-          }
-        }
-
         useEffect(() => {
-          if (tab !== "aggregates") return;
-          if (!jobId) return;
-          if (!jobStatus || jobStatus.status !== "succeeded") return;
-          loadAggregates();
-        }, [tab, jobId, jobStatus]);
+          if (tab !== "aggregates" || !jobId || !ready) return;
+          setAggError("");
+          getJson(`/analysis/${jobId}/aggregates`).then(setAggregates).catch(e => setAggError(String(e.message || e)));
+        }, [tab, jobId, ready]);
 
         const jobPill = useMemo(() => {
           if (!jobStatus) return null;
           const s = jobStatus.status;
           const cls = s === "succeeded" ? "ok" : s === "failed" ? "danger" : "warn";
-          return React.createElement("span", { className: `pill ${cls}` }, `${s} · ${Math.round((jobStatus.progress||0)*100)}%`);
+          const msg = s === "running" && jobStatus.message ? ` · ${jobStatus.message}` : "";
+          return h("span", { className: `pill ${cls}` }, `${s} · ${Math.round((jobStatus.progress || 0) * 100)}%${msg}`);
         }, [jobStatus]);
 
-        return React.createElement(
-          "div",
-          { className: "container" },
-          React.createElement(
-            "div",
-            { className: "topbar" },
-            React.createElement("div", { className: "brand" }, "Churn Risk Dashboard"),
-            React.createElement(
-              "div",
-              { className: "tabs" },
-              ["import", "dashboard", "user", "aggregates"].map((t) =>
-                React.createElement(
-                  "button",
-                  { key: t, className: `tab ${tab === t ? "active" : ""}`, onClick: () => setTab(t) },
-                  t === "import" ? "Import & Run" :
-                  t === "dashboard" ? "Risk Dashboard" :
-                  t === "user" ? "User Deep Dive" : "Aggregate Insights"
-                )
+        const tabNames = { import: "Import & Run", dashboard: "Risk Dashboard", user: "User Deep Dive", aggregates: "Aggregate Insights" };
+
+        return h("div", { className: "container" },
+          h("div", { className: "topbar" },
+            h("div", { className: "brand" }, "Churn Risk Dashboard"),
+            h("div", { className: "tabs" },
+              Object.keys(tabNames).map((t) =>
+                h("button", { key: t, className: `tab ${tab === t ? "active" : ""}`, onClick: () => setTab(t) }, tabNames[t])
               )
             )
           ),
-          React.createElement(
-            "div",
-            { className: "grid" },
-            tab === "import" && React.createElement(ImportRun, {
-              dbPath, setDbPath,
-              validateDb, validateResult, validateError,
-              runAnalysis, jobId, jobPill,
+          h("div", { className: "grid" },
+            tab === "import" && h(ImportRun, {
+              source, changeSource, validateDb: () => validateDb(), validating, uploadFile,
+              validateResult, validateError, schemaMap, setSchemaMap,
+              churnWindow, setChurnWindow, labelSource, setLabelSource,
+              threshold, setThreshold, runAnalysis, runError, jobPill,
             }),
-            tab === "dashboard" && React.createElement(RiskDashboard, {
-              jobId, jobStatus, jobPill,
-              topN, setTopN,
-              threshold, setThreshold,
-              users, usersError,
-              onSelectUser: loadUser,
+            tab === "dashboard" && h(RiskDashboard, {
+              jobId, jobStatus, jobPill, ready,
+              topN, setTopN, threshold, setThreshold, hideChurned, setHideChurned,
+              users, usersTotal, usersError, onSelectUser: loadUser,
             }),
-            tab === "user" && React.createElement(UserDeepDive, {
-              jobId, jobStatus, jobPill,
-              selectedUserId, userDetails, userExplain, userSeries, userError,
+            tab === "user" && h(UserDeepDive, {
+              jobPill, selectedUserId, userDetails, userExplain, userSeries, userError,
             }),
-            tab === "aggregates" && React.createElement(AggregateInsights, {
-              jobId, jobStatus, jobPill,
-              aggregates, aggError,
-            })
+            tab === "aggregates" && h(AggregateInsights, { jobId, jobPill, ready, aggregates, aggError })
           )
         );
       }
 
+      // ----------------------------------------------------------------------------------------
+      // Import & schema mapping
+      // ----------------------------------------------------------------------------------------
+
       function ImportRun(props) {
-        return React.createElement(
-          "div",
-          { className: "card" },
-          React.createElement("h3", null, "Import & Run"),
-          React.createElement(
-            "div",
-            { className: "row" },
-            React.createElement("input", {
-              value: props.dbPath,
-              onChange: (e) => props.setDbPath(e.target.value),
-              placeholder: "SQLite DB path, e.g. D:\\\\Coding\\\\churn\\\\Project_001_Churn\\\\app_usage.db",
-              className: "mono",
-              style: { minWidth: "520px", flex: "1 1 520px" }
-            }),
-            React.createElement("button", { className: "secondary", onClick: props.validateDb }, "Validate DB"),
-            React.createElement("button", { onClick: props.runAnalysis }, "Run Churn Analysis"),
-            props.jobPill
-          ),
-          React.createElement("div", { className: "hint", style: { marginTop: "10px" } },
-            "Tip: The backend must be running locally. Open this UI at ",
-            React.createElement("span", { className: "mono" }, window.location.origin + "/ui"),
-            "."
-          ),
-          props.validateError && React.createElement("div", { className: "error", style: { marginTop: "10px" } }, props.validateError),
-          props.validateResult && React.createElement(
-            "div",
-            { style: { marginTop: "10px" } },
-            React.createElement("div", { className: "row" },
-              React.createElement("span", { className: "pill ok" }, "Schema OK"),
-              React.createElement("span", { className: "pill" }, "users=" + (props.validateResult.capabilities.hasUsersTable ? "yes" : "no")),
-              React.createElement("span", { className: "pill" }, "sessions=" + (props.validateResult.capabilities.hasSessionsTable ? "yes" : "no")),
-              React.createElement("span", { className: "pill" }, "labels=" + (props.validateResult.capabilities.hasChurnLabels ? "yes" : "no")),
-              React.createElement("span", { className: "pill" }, "feature_usage=" + (props.validateResult.capabilities.hasFeatureUsageTable ? "yes" : "no"))
+        const fileRef = useRef(null);
+        const v = props.validateResult;
+        return h(React.Fragment, null,
+          h("div", { className: "card" },
+            h("h3", null, "1 · Connect a database"),
+            h("div", { className: "row" },
+              h("input", {
+                value: props.source,
+                onChange: (e) => props.changeSource(e.target.value),
+                placeholder: "app_usage.db  ·  /data/exports/  ·  postgresql://user:pass@host/db",
+                className: "mono grow",
+              }),
+              h("button", { className: "secondary", onClick: props.validateDb, disabled: !props.source || props.validating },
+                props.validating ? "Analysing…" : "Detect schema"),
+              h("button", { className: "secondary", onClick: () => fileRef.current && fileRef.current.click() }, "Upload file"),
+              h("input", {
+                ref: fileRef, type: "file", style: { display: "none" },
+                accept: ".db,.sqlite,.sqlite3,.db3,.csv,.tsv,.parquet,.xlsx,.xls,.zip",
+                onChange: (e) => { if (e.target.files[0]) props.uploadFile(e.target.files[0]); e.target.value = ""; },
+              })
             ),
-            (props.validateResult.capabilities.notes || []).length > 0 &&
-              React.createElement("div", { className: "hint", style: { marginTop: "10px" } },
-                (props.validateResult.capabilities.notes || []).map((n, i) => React.createElement("div", { key: i }, "- " + n))
+            h("div", { className: "hint", style: { marginTop: "10px" } },
+              "Accepts a SQLite file, a CSV/Parquet/Excel file or folder, a .zip, or any SQLAlchemy database URL ",
+              "(PostgreSQL, MySQL/MariaDB, SQL Server, Oracle…). The database is only read, never modified."
+            ),
+            props.validateError && h("div", { className: "error", style: { marginTop: "10px" } }, props.validateError),
+            v && h("div", { className: "row", style: { marginTop: "10px" } },
+              h("span", { className: `pill ${v.ok ? "ok" : "warn"}` }, v.ok ? "Ready to analyse" : "Needs mapping"),
+              h("span", { className: "pill" }, v.dialect),
+              h("span", { className: "pill" }, `${v.tables.length} tables`),
+              h("span", { className: "pill" }, "users: " + (v.schemaMap.user_table || "from activity")),
+              h("span", { className: "pill" }, "activity: " + (v.capabilities.activityTables.join(", ") || "none")),
+              h("span", { className: "pill" }, "labels: " + (v.capabilities.hasChurnLabels ? "yes" : "no")),
+              confPill(v.schemaMap.confidence)
+            )
+          ),
+          v && props.schemaMap && h(SchemaEditor, { tables: v.tables, schemaMap: props.schemaMap, setSchemaMap: props.setSchemaMap }),
+          h("div", { className: "card" },
+            h("h3", null, "3 · Run the analysis"),
+            h("div", { className: "fields" },
+              h("label", { className: "field" }, h("span", null, "Churn window (days)"),
+                h("input", {
+                  value: props.churnWindow, type: "number", min: 1, max: 365, placeholder: "auto",
+                  onChange: (e) => props.setChurnWindow(e.target.value),
+                })
+              ),
+              h("label", { className: "field" }, h("span", null, "Churn definition"),
+                h("select", { value: props.labelSource, onChange: (e) => props.setLabelSource(e.target.value) },
+                  h("option", { value: "auto" }, "Auto (label column if present)"),
+                  h("option", { value: "explicit" }, "Use the label column"),
+                  h("option", { value: "derived" }, "Inactivity-based")
+                )
+              ),
+              h("label", { className: "field" }, h("span", null, "Medium-risk threshold"),
+                h("input", {
+                  value: props.threshold, type: "number", step: "0.05", min: 0, max: 1,
+                  onChange: (e) => props.setThreshold(e.target.value),
+                })
               )
+            ),
+            h("div", { className: "hint", style: { marginTop: "8px" } },
+              "Leave the churn window empty to infer it from how often users come back (e.g. ~7 days for a daily-habit app). ",
+              "A user counts as churned after that many days without any activity."
+            ),
+            h("div", { className: "row", style: { marginTop: "12px" } },
+              h("button", { onClick: props.runAnalysis, disabled: !props.source }, "Run Churn Analysis"),
+              props.jobPill
+            ),
+            props.runError && h("div", { className: "error", style: { marginTop: "10px" } }, props.runError)
           )
+        );
+      }
+
+      function guessActivity(table, userIdCol) {
+        const cols = table.columns;
+        const time = cols.find(c => c.timeFormat) || cols[0];
+        const userCol = cols.find(c => c.name === userIdCol) ||
+          cols.find(c => /user|account|customer|member|driver|learner|player/i.test(c.name) && /id$/i.test(c.name)) || cols[0];
+        const idLike = (c) => c.pk || /(^id$|_id$|id$|uuid)/i.test(c.name);
+        return {
+          table: table.name, user_column: userCol.name, time_column: time.name, time_format: time.timeFormat || "iso",
+          measures: cols.filter(c => c.kind === "numeric" && !idLike(c) && !c.timeFormat).map(c => c.name).slice(0, 8),
+          categoricals: cols.filter(c => c.kind === "string" && !idLike(c) && c.nUnique > 1 && c.nUnique <= 60).map(c => c.name).slice(0, 4),
+          via: null, enabled: true, confidence: null, reason: "added manually",
+        };
+      }
+
+      function Checks({ options, selected, onChange }) {
+        if (!options.length) return h("span", { className: "hint" }, "none available");
+        return h("div", { className: "checks" },
+          options.map(o => h("label", { key: o },
+            h("input", {
+              type: "checkbox", checked: selected.includes(o),
+              onChange: (e) => onChange(e.target.checked ? [...selected, o] : selected.filter(x => x !== o)),
+            }),
+            h("span", { className: "mono" }, o)
+          ))
+        );
+      }
+
+      function SchemaEditor({ tables, schemaMap, setSchemaMap }) {
+        const byName = useMemo(() => Object.fromEntries(tables.map(t => [t.name, t])), [tables]);
+        const [addTable, setAddTable] = useState("");
+        const [mappingName, setMappingName] = useState("");
+        const [mappings, setMappings] = useState([]);
+        const [msg, setMsg] = useState("");
+        const m = schemaMap;
+        const update = (fn) => { const next = clone(m); fn(next); setSchemaMap(next); };
+        const userT = m.user_table ? byName[m.user_table] : null;
+        const colNames = (t) => (t ? t.columns.map(c => c.name) : []);
+
+        useEffect(() => { getJson("/mappings").then(o => setMappings(o.mappings || [])).catch(() => {}); }, []);
+
+        async function save() {
+          setMsg("");
+          try {
+            await postJson("/mappings", { name: mappingName, schemaMap: m });
+            setMsg(`Saved as "${mappingName}".`);
+            const o = await getJson("/mappings"); setMappings(o.mappings || []);
+          } catch (e) { setMsg(String(e.message || e)); }
+        }
+        async function load(name) {
+          if (!name) return;
+          try { const o = await getJson(`/mappings/${encodeURIComponent(name)}`); setSchemaMap(o.schemaMap); setMsg(`Loaded "${name}".`); }
+          catch (e) { setMsg(String(e.message || e)); }
+        }
+
+        const unused = tables.filter(t => t.name !== m.user_table && !m.activities.some(a => a.table === t.name));
+
+        return h("div", { className: "card" },
+          h("h3", null, "2 · Review the detected schema"),
+          h("div", { className: "hint" }, "Everything below was inferred automatically. Adjust anything that looks wrong, then run the analysis."),
+          (m.notes || []).length > 0 && h("div", { className: "hint", style: { marginTop: "8px" } },
+            m.notes.map((n, i) => h("div", { key: i }, "• " + n))),
+
+          h("h4", null, "Users"),
+          h("div", { className: "fields" },
+            h("label", { className: "field" }, h("span", null, "User table"),
+              h("select", {
+                value: m.user_table || "",
+                onChange: (e) => update(x => {
+                  x.user_table = e.target.value || null;
+                  const t = byName[e.target.value];
+                  x.user_id_column = t ? (t.primaryKey[0] || t.columns[0].name) : null;
+                  x.signup_column = null; x.static_categoricals = []; x.static_numerics = [];
+                  if (x.label && x.label.table !== x.user_table) x.label = null;
+                }),
+              }, h("option", { value: "" }, "(none — ids come from activity)"),
+                tables.map(t => h("option", { key: t.name, value: t.name }, t.name)))
+            ),
+            userT && h("label", { className: "field" }, h("span", null, "User id column"),
+              h("select", { value: m.user_id_column || "", onChange: (e) => update(x => { x.user_id_column = e.target.value; }) },
+                colNames(userT).map(c => h("option", { key: c, value: c }, c)))
+            ),
+            userT && h("label", { className: "field" }, h("span", null, "Signup date (for tenure)"),
+              h("select", {
+                value: m.signup_column || "",
+                onChange: (e) => update(x => {
+                  x.signup_column = e.target.value || null;
+                  const c = userT.columns.find(c => c.name === e.target.value);
+                  x.signup_format = c ? (c.timeFormat || "iso") : null;
+                }),
+              }, h("option", { value: "" }, "(none)"),
+                userT.columns.filter(c => c.timeFormat).map(c => h("option", { key: c.name, value: c.name }, `${c.name} (${c.timeFormat})`)))
+            )
+          ),
+          userT && h("div", { style: { marginTop: "8px" } }, m.user_reason && h("span", { className: "hint" }, m.user_reason + " "), confPill(m.user_confidence)),
+          userT && h("div", { style: { marginTop: "10px" } },
+            h("div", { className: "hint" }, "User attributes used as features (categories)"),
+            h(Checks, {
+              options: userT.columns.filter(c => c.kind === "string" && c.name !== m.user_id_column).map(c => c.name),
+              selected: m.static_categoricals, onChange: (v) => update(x => { x.static_categoricals = v; }),
+            }),
+            h("div", { className: "hint", style: { marginTop: "6px" } }, "User attributes used as features (numbers) — avoid columns that change over time, like totals or last-login dates"),
+            h(Checks, {
+              options: userT.columns.filter(c => (c.kind === "numeric" || c.kind === "bool") && c.name !== m.user_id_column && !c.timeFormat).map(c => c.name),
+              selected: m.static_numerics, onChange: (v) => update(x => { x.static_numerics = v; }),
+            })
+          ),
+
+          h("h4", null, "Churn label (optional)"),
+          h("div", { className: "fields" },
+            h("label", { className: "field" }, h("span", null, "Label column"),
+              h("select", {
+                value: m.label ? `${m.label.table}.${m.label.column}` : "",
+                onChange: (e) => update(x => {
+                  if (!e.target.value) { x.label = null; return; }
+                  const [t, c] = e.target.value.split(".");
+                  const col = byName[t].columns.find(cc => cc.name === c);
+                  x.label = {
+                    table: t, column: c, user_column: x.user_id_column, kind: col && col.timeFormat ? "not_null" : "binary",
+                    positive_values: ["1", "true", "yes", "churned", "cancelled"], confidence: null, reason: "set manually",
+                  };
+                }),
+              }, h("option", { value: "" }, "(none — derive churn from inactivity)"),
+                userT && userT.columns.filter(c => c.name !== m.user_id_column).map(c =>
+                  h("option", { key: c.name, value: `${userT.name}.${c.name}` }, c.name)))
+            ),
+            m.label && m.label.kind === "binary" && h("label", { className: "field" }, h("span", null, "Values meaning churned (comma separated)"),
+              h("input", {
+                value: (m.label.positive_values || []).join(", "),
+                onChange: (e) => update(x => { x.label.positive_values = e.target.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean); }),
+              })
+            )
+          ),
+          m.label && m.label.reason && h("div", { className: "hint", style: { marginTop: "6px" } }, m.label.reason),
+
+          h("h4", null, "Activity tables"),
+          m.activities.length === 0 && h("div", { className: "hint" }, "No activity table detected. Add one below."),
+          m.activities.map((a, i) => {
+            const t = byName[a.table];
+            if (!t) return null;
+            const set = (fn) => update(x => fn(x.activities[i]));
+            return h("div", { key: a.table + i, className: "act" },
+              h("div", { className: "row" },
+                h("label", { className: "row small" },
+                  h("input", { type: "checkbox", checked: a.enabled, onChange: (e) => set(y => { y.enabled = e.target.checked; }) }),
+                  h("b", { className: "mono" }, a.table)
+                ),
+                h("span", { className: "pill" }, `${t.rowCount ?? "?"} rows`),
+                confPill(a.confidence),
+                h("button", { className: "link", onClick: () => update(x => { x.activities.splice(i, 1); }) }, "remove")
+              ),
+              a.reason && h("div", { className: "hint", style: { marginTop: "4px" } }, a.reason),
+              h("div", { className: "fields", style: { marginTop: "8px" } },
+                a.via
+                  ? h("div", { className: "field" }, h("span", null, "Linked to users via"),
+                      h("div", { className: "mono small" }, `${a.table}.${a.via.local_column} → ${a.via.table}.${a.via.remote_column} → ${a.via.user_column}`))
+                  : h("label", { className: "field" }, h("span", null, "User id column"),
+                      h("select", { value: a.user_column || "", onChange: (e) => set(y => { y.user_column = e.target.value; }) },
+                        colNames(t).map(c => h("option", { key: c, value: c }, c)))),
+                h("label", { className: "field" }, h("span", null, "Event time column"),
+                  h("select", {
+                    value: a.time_column,
+                    onChange: (e) => set(y => {
+                      y.time_column = e.target.value;
+                      const c = t.columns.find(cc => cc.name === e.target.value);
+                      y.time_format = (c && c.timeFormat) || "iso";
+                    }),
+                  }, t.columns.map(c => h("option", { key: c.name, value: c.name }, c.timeFormat ? `${c.name} (${c.timeFormat})` : c.name)))
+                ),
+                h("label", { className: "field" }, h("span", null, "Time format"),
+                  h("select", { value: a.time_format, onChange: (e) => set(y => { y.time_format = e.target.value; }) },
+                    ["native", "iso", "yyyymmdd", "unix_s", "unix_ms", "unix_us", "excel"].map(f => h("option", { key: f, value: f }, f))))
+              ),
+              h("div", { style: { marginTop: "8px" } },
+                h("div", { className: "hint" }, "Numeric measures"),
+                h(Checks, {
+                  options: t.columns.filter(c => c.kind === "numeric" || c.kind === "bool").map(c => c.name),
+                  selected: a.measures, onChange: (v) => set(y => { y.measures = v; }),
+                }),
+                h("div", { className: "hint", style: { marginTop: "6px" } }, "Categories (feature / event type, etc.)"),
+                h(Checks, {
+                  options: t.columns.filter(c => c.kind === "string").map(c => c.name),
+                  selected: a.categoricals, onChange: (v) => set(y => { y.categoricals = v; }),
+                })
+              )
+            );
+          }),
+          unused.length > 0 && h("div", { className: "row", style: { marginTop: "10px" } },
+            h("select", { value: addTable, onChange: (e) => setAddTable(e.target.value) },
+              h("option", { value: "" }, "Add another activity table…"),
+              unused.map(t => h("option", { key: t.name, value: t.name }, t.name))),
+            h("button", {
+              className: "secondary", disabled: !addTable,
+              onClick: () => { update(x => { x.activities.push(guessActivity(byName[addTable], x.user_id_column)); }); setAddTable(""); },
+            }, "Add")
+          ),
+
+          h("h4", null, "Saved mappings"),
+          h("div", { className: "row" },
+            h("input", { value: mappingName, placeholder: "mapping name, e.g. duolingo_prod", onChange: (e) => setMappingName(e.target.value) }),
+            h("button", { className: "secondary", disabled: !mappingName.trim(), onClick: save }, "Save mapping"),
+            mappings.length > 0 && h("select", { value: "", onChange: (e) => load(e.target.value) },
+              h("option", { value: "" }, "Load a saved mapping…"),
+              mappings.map(n => h("option", { key: n, value: n }, n)))
+          ),
+          msg && h("div", { className: "hint", style: { marginTop: "6px" } }, msg)
+        );
+      }
+
+      // ----------------------------------------------------------------------------------------
+      // Dashboard
+      // ----------------------------------------------------------------------------------------
+
+      function ModelCard({ summary }) {
+        const cd = summary.churnDefinition || {};
+        const m = summary.metrics || {};
+        const kv = (k, v) => h("div", { className: "kv", key: k }, h("div", { className: "k" }, k), h("div", { className: "v" }, v));
+        return h("div", { className: "card" },
+          h("h3", null, "Model & churn definition"),
+          h("div", { className: "hint" }, cd.description || ""),
+          h("div", { className: "metricGrid four", style: { marginTop: "10px" } },
+            kv("Churn window", cd.window_days ? `${cd.window_days} days${cd.auto ? " (auto)" : ""}` : "–"),
+            kv("Scored as of", cd.scoring_date || "–"),
+            kv("Users scored / active", `${summary.usersScored} / ${summary.usersActive}`),
+            kv("Model", summary.supervised ? "XGBoost (calibrated)" : "Heuristic (no labels)"),
+            summary.supervised && kv("ROC-AUC (validation)", fmt(m.rocAuc, 3)),
+            summary.supervised && kv("Recency-only baseline AUC", fmt(m.baselineRocAuc, 3)),
+            summary.supervised && kv("PR-AUC", `${fmt(m.prAuc, 3)} (base rate ${fmt(m.baseRate, 3)})`),
+            summary.supervised && kv("Lift in top 10%", m.liftTop10 ? `${fmt(m.liftTop10, 2)}×` : "–"),
+            summary.supervised && kv("Precision / recall @ threshold", `${fmt(m.precision, 2)} / ${fmt(m.recall, 2)}`),
+            summary.supervised && kv("Brier score", fmt(m.brier, 4))
+          ),
+          summary.supervised && h("div", { className: "hint", style: { marginTop: "8px" } }, `Validated on ${m.validation} · ${m.trainRows} training rows · ${m.calibration} calibration.`),
+          (summary.notes || []).length > 0 && h("div", { className: "hint", style: { marginTop: "8px" } },
+            summary.notes.map((n, i) => h("div", { key: i }, "• " + n)))
         );
       }
 
       function RiskDashboard(props) {
-        const ready = props.jobStatus && props.jobStatus.status === "succeeded";
         const failed = props.jobStatus && props.jobStatus.status === "failed";
-
-        return React.createElement(
-          "div",
-          { className: "card" },
-          React.createElement("h3", null, "Risk Dashboard"),
-          React.createElement(
-            "div",
-            { className: "row" },
-            React.createElement("span", { className: "pill" }, "Job: ", React.createElement("span", { className: "mono" }, props.jobId || "(none)")),
-            props.jobPill,
-            React.createElement("select", { value: props.topN, onChange: (e) => props.setTopN(Number(e.target.value)) },
-              [50, 100, 1000, 5000].map(v => React.createElement("option", { key: v, value: v }, "Top " + v))
-            ),
-            React.createElement("input", {
-              value: props.threshold,
-              onChange: (e) => props.setThreshold(Number(e.target.value)),
-              type: "number",
-              step: "0.05",
-              min: "0",
-              max: "1",
-              style: { minWidth: "160px" }
-            }),
-            React.createElement("span", { className: "hint" }, "Threshold")
-          ),
-          failed && React.createElement("div", { className: "error", style: { marginTop: "10px" } }, props.jobStatus.error || "Job failed."),
-          !ready && !failed && React.createElement("div", { className: "hint", style: { marginTop: "10px" } }, "Run an analysis first (Import & Run)."),
-          props.usersError && React.createElement("div", { className: "error", style: { marginTop: "10px" } }, props.usersError),
-          ready && React.createElement(
-            "div",
-            { style: { marginTop: "10px" } },
-            React.createElement(
-              "table",
-              null,
-              React.createElement("thead", null,
-                React.createElement("tr", null,
-                  React.createElement("th", null, "User"),
-                  React.createElement("th", null, "Churn probability"),
-                  React.createElement("th", null, "Tier")
-                )
+        return h(React.Fragment, null,
+          props.ready && h(ModelCard, { summary: props.jobStatus.summary }),
+          h("div", { className: "card" },
+            h("h3", null, "Risk leaderboard"),
+            h("div", { className: "row" },
+              props.jobPill,
+              h("select", { value: props.topN, onChange: (e) => props.setTopN(Number(e.target.value)) },
+                [50, 100, 1000, 5000].map(v => h("option", { key: v, value: v }, "Top " + v))
               ),
-              React.createElement("tbody", null,
-                (props.users || []).map(u =>
-                  React.createElement("tr", { key: u.userId, className: "clickable", onClick: () => props.onSelectUser(u.userId) },
-                    React.createElement("td", { className: "mono" }, u.userId),
-                    React.createElement("td", null, fmt(u.churnProbability, 4)),
-                    React.createElement("td", null, riskPill(u.riskTier))
-                  )
-                )
+              h("label", { className: "row small" },
+                h("span", { className: "hint" }, "Min probability"),
+                h("input", {
+                  value: props.threshold, type: "number", step: "0.05", min: "0", max: "1", style: { width: "90px" },
+                  onChange: (e) => props.setThreshold(e.target.value),
+                })
+              ),
+              h("label", { className: "row small" },
+                h("input", { type: "checkbox", checked: props.hideChurned, onChange: (e) => props.setHideChurned(e.target.checked) }),
+                h("span", null, "Hide users who already churned")
               )
             ),
-            React.createElement("div", { className: "hint", style: { marginTop: "8px" } }, "Click a user to open the deep dive.")
+            failed && h("div", { className: "error", style: { marginTop: "10px" } }, props.jobStatus.error || "Job failed."),
+            !props.ready && !failed && h("div", { className: "hint", style: { marginTop: "10px" } },
+              props.jobId ? "Analysis running…" : "Run an analysis first (Import & Run)."),
+            props.usersError && h("div", { className: "error", style: { marginTop: "10px" } }, props.usersError),
+            props.ready && h("div", { style: { marginTop: "10px" } },
+              h("div", { className: "hint" }, `${props.usersTotal} users match; showing ${props.users.length}.`),
+              h("div", { className: "tableWrap" },
+                h("table", null,
+                  h("thead", null, h("tr", null,
+                    h("th", null, "User"), h("th", null, "Churn probability"), h("th", null, "Tier")
+                  )),
+                  h("tbody", null,
+                    (props.users || []).map(u =>
+                      h("tr", { key: u.userId, className: "clickable", onClick: () => props.onSelectUser(u.userId) },
+                        h("td", { className: "mono" }, u.userId),
+                        h("td", null, fmt(u.churnProbability, 4)),
+                        h("td", null, riskPill(u.riskTier, u.status))
+                      )
+                    )
+                  )
+                )
+              ),
+              h("div", { className: "hint", style: { marginTop: "8px" } }, "Click a user to open the deep dive.")
+            )
           )
         );
       }
 
+      function lineChart(canvas, labels, datasets, type = "line") {
+        return new Chart(canvas.getContext("2d"), {
+          type,
+          data: { labels, datasets },
+          options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: "#e5e7eb" } } },
+            scales: { x: { ticks: { color: "#94a3b8", maxTicksLimit: 8 } }, y: { ticks: { color: "#94a3b8" }, beginAtZero: true } },
+          },
+        });
+      }
+
       function UserDeepDive(props) {
-        const chartRef1 = useRef(null);
-        const chartRef2 = useRef(null);
+        const ref1 = useRef(null);
+        const ref2 = useRef(null);
         const chart1 = useRef(null);
         const chart2 = useRef(null);
+        const [measure, setMeasure] = useState("");
+        const names = (props.userSeries && props.userSeries.measureNames) || [];
+        const activeMeasure = names.includes(measure) ? measure : (names[0] || "");
 
         useEffect(() => {
-          const pts = props.userSeries && props.userSeries.points ? props.userSeries.points : [];
-          if (!chartRef1.current || !chartRef2.current) return;
-
+          const pts = props.userSeries ? props.userSeries.points : [];
+          if (!ref1.current) return;
           const labels = pts.map(p => p.date);
-          const len = pts.map(p => Number(p.sessionLength));
-          const ev = pts.map(p => Number(p.sessionEvents));
-
           if (chart1.current) chart1.current.destroy();
-          if (chart2.current) chart2.current.destroy();
-
-          chart1.current = new Chart(chartRef1.current.getContext("2d"), {
-            type: "line",
-            data: { labels, datasets: [{ label: "Session Length", data: len, borderColor: "#60a5fa", tension: 0.25 }] },
-            options: { plugins: { legend: { labels: { color: "#e5e7eb" } } }, scales: { x: { ticks: { color: "#94a3b8" } }, y: { ticks: { color: "#94a3b8" } } } }
-          });
-          chart2.current = new Chart(chartRef2.current.getContext("2d"), {
-            type: "line",
-            data: { labels, datasets: [{ label: "Session Events", data: ev, borderColor: "#34d399", tension: 0.25 }] },
-            options: { plugins: { legend: { labels: { color: "#e5e7eb" } } }, scales: { x: { ticks: { color: "#94a3b8" } }, y: { ticks: { color: "#94a3b8" } } } }
-          });
-        }, [props.userSeries]);
+          chart1.current = lineChart(ref1.current, labels,
+            [{ label: "Activity per day", data: pts.map(p => p.activityCount), backgroundColor: "#60a5fa" }], "bar");
+          if (chart2.current) { chart2.current.destroy(); chart2.current = null; }
+          if (ref2.current && activeMeasure) {
+            chart2.current = lineChart(ref2.current, labels,
+              [{ label: activeMeasure, data: pts.map(p => p.measures[activeMeasure] || 0), borderColor: "#34d399", tension: 0.25 }]);
+          }
+          return () => {
+            if (chart1.current) { chart1.current.destroy(); chart1.current = null; }
+            if (chart2.current) { chart2.current.destroy(); chart2.current = null; }
+          };
+        }, [props.userSeries, activeMeasure]);
 
         if (!props.selectedUserId) {
-          return React.createElement("div", { className: "card" },
-            React.createElement("h3", null, "User Deep Dive"),
-            React.createElement("div", { className: "hint" }, "Select a user from the Risk Dashboard.")
-          );
+          return h("div", { className: "card" }, h("h3", null, "User Deep Dive"),
+            h("div", { className: "hint" }, "Select a user from the Risk Dashboard."));
         }
+        const d = props.userDetails;
+        const labels = (d && d.metricLabels) || {};
+        const factorKeys = props.userExplain ? props.userExplain.topFactors.map(f => f.featureKey) : [];
+        const keyMetrics = d ? [...new Set(["recency_days", "active_day_rate", "tenure_days", ...factorKeys])]
+          .filter(k => k in d.metrics).slice(0, 12) : [];
 
-        return React.createElement(
-          "div",
-          { className: "card" },
-          React.createElement("h3", null, "User Deep Dive"),
-          props.userError && React.createElement("div", { className: "error" }, props.userError),
-          props.userDetails && React.createElement(
-            "div",
-            null,
-            React.createElement("div", { className: "row" },
-              React.createElement("span", { className: "pill" }, "User: ", React.createElement("span", { className: "mono" }, props.selectedUserId)),
-              React.createElement("span", { className: "pill" }, "Prob: ", fmt(props.userDetails.churnProbability, 4)),
-              riskPill(props.userDetails.riskTier),
+        return h("div", { className: "card" },
+          h("h3", null, "User Deep Dive"),
+          props.userError && h("div", { className: "error" }, props.userError),
+          !d && !props.userError && h("div", { className: "hint" }, "Loading…"),
+          d && h("div", null,
+            h("div", { className: "row" },
+              h("span", { className: "pill" }, "User: ", h("span", { className: "mono" }, props.selectedUserId)),
+              h("span", { className: "pill" }, "Prob: ", fmt(d.churnProbability, 4)),
+              riskPill(d.riskTier, d.status),
+              d.knownLabel !== null && d.knownLabel !== undefined && h("span", { className: "pill" }, `label: ${d.knownLabel ? "churned" : "retained"}`),
               props.jobPill
             ),
-            props.userExplain && React.createElement("div", { className: "grid two", style: { marginTop: "12px" } },
-              React.createElement("div", { className: "card" },
-                React.createElement("h3", null, "Why this user is risky (SHAP)"),
-                React.createElement("div", { className: "hint" }, props.userExplain.whyRiskySummary || ""),
-                React.createElement("div", { style: { marginTop: "10px" } },
+            props.userExplain && h("div", { className: "grid two", style: { marginTop: "12px" } },
+              h("div", { className: "card" },
+                h("h3", null, "Why this user is risky (SHAP)"),
+                h("div", { className: "hint" }, props.userExplain.whyRiskySummary || ""),
+                h("div", { style: { marginTop: "10px" } },
                   (props.userExplain.topFactors || []).length === 0
-                    ? React.createElement("div", { className: "hint" }, "No explainability available for this run.")
-                    : React.createElement("table", null,
-                        React.createElement("thead", null,
-                          React.createElement("tr", null,
-                            React.createElement("th", null, "Factor"),
-                            React.createElement("th", null, "SHAP"),
-                            React.createElement("th", null, "Value")
+                    ? h("div", { className: "hint" }, "No factor breakdown for this user.")
+                    : h("div", { className: "tableWrap" }, h("table", null,
+                        h("thead", null, h("tr", null, h("th", null, "Factor"), h("th", null, "Effect"), h("th", null, "Value"))),
+                        h("tbody", null, props.userExplain.topFactors.map((f, i) =>
+                          h("tr", { key: i },
+                            h("td", null, f.displayName),
+                            h("td", { style: { color: f.shapValue > 0 ? "var(--danger)" : "var(--ok)" } },
+                              (f.shapValue > 0 ? "▲ " : "▼ ") + fmt(Math.abs(f.shapValue), 3)),
+                            h("td", { className: "mono" }, fmt(f.featureValue, 2))
                           )
-                        ),
-                        React.createElement("tbody", null,
-                          props.userExplain.topFactors.map((f, i) =>
-                            React.createElement("tr", { key: i },
-                              React.createElement("td", null, f.displayName),
-                              React.createElement("td", null, fmt(f.shapValue, 4)),
-                              React.createElement("td", null, fmt(f.featureValue, 4))
-                            )
-                          )
-                        )
-                      )
+                        ))
+                      ))
                 )
               ),
-              React.createElement("div", { className: "card" },
-                React.createElement("h3", null, "Key metrics"),
-                React.createElement("div", { className: "metricGrid" },
-                  Object.entries(props.userDetails.metrics || {}).slice(0, 12).map(([k, v]) =>
-                    React.createElement("div", { key: k, className: "kv" },
-                      React.createElement("div", { className: "k" }, k),
-                      React.createElement("div", { className: "v mono" }, typeof v === "number" ? fmt(v, 4) : String(v))
-                    )
-                  )
+              h("div", { className: "card" },
+                h("h3", null, "Key metrics"),
+                h("div", { className: "metricGrid" },
+                  keyMetrics.map(k => h("div", { key: k, className: "kv" },
+                    h("div", { className: "k" }, labels[k] || k),
+                    h("div", { className: "v mono" }, typeof d.metrics[k] === "number" ? fmt(d.metrics[k], 2) : String(d.metrics[k] ?? "–"))
+                  ))
                 ),
-                React.createElement("div", { className: "hint", style: { marginTop: "8px" } }, "More metrics are available in the raw response; this panel shows a compact subset.")
+                h("div", { className: "hint", style: { marginTop: "8px" } }, "All metrics are in the API response; this panel shows the most relevant ones.")
               )
             ),
-            React.createElement("div", { className: "split", style: { marginTop: "12px" } },
-              React.createElement("div", { className: "card" },
-                React.createElement("h3", null, "Session length over time"),
-                React.createElement("canvas", { ref: chartRef1 })
+            h("div", { className: "split", style: { marginTop: "12px" } },
+              h("div", { className: "card" },
+                h("h3", null, `Activity over time (up to ${props.userSeries ? props.userSeries.scoringDate : ""})`),
+                h("canvas", { ref: ref1 })
               ),
-              React.createElement("div", { className: "card" },
-                React.createElement("h3", null, "Session events over time"),
-                React.createElement("canvas", { ref: chartRef2 })
+              h("div", { className: "card" },
+                h("div", { className: "row", style: { justifyContent: "space-between" } },
+                  h("h3", { style: { margin: 0 } }, "Measure over time"),
+                  names.length > 1 && h("select", { value: activeMeasure, onChange: (e) => setMeasure(e.target.value) },
+                    names.map(n => h("option", { key: n, value: n }, n)))
+                ),
+                names.length === 0
+                  ? h("div", { className: "hint", style: { marginTop: "10px" } }, "No numeric measures mapped for this database.")
+                  : h("canvas", { ref: ref2, style: { marginTop: "10px" } })
               )
             )
           )
@@ -548,73 +852,47 @@
       }
 
       function AggregateInsights(props) {
-        const ready = props.jobStatus && props.jobStatus.status === "succeeded";
-        return React.createElement(
-          "div",
-          { className: "card" },
-          React.createElement("h3", null, "Aggregate Insights"),
-          React.createElement("div", { className: "row" },
-            React.createElement("span", { className: "pill" }, "Job: ", React.createElement("span", { className: "mono" }, props.jobId || "(none)")),
-            props.jobPill
-          ),
-          !ready && React.createElement("div", { className: "hint", style: { marginTop: "10px" } }, "Run an analysis first."),
-          props.aggError && React.createElement("div", { className: "error", style: { marginTop: "10px" } }, props.aggError),
-          ready && props.aggregates && React.createElement(
-            "div",
-            { className: "grid", style: { marginTop: "10px" } },
-            React.createElement("div", { className: "card" },
-              React.createElement("h3", null, "Group averages (selected metrics)"),
-              React.createElement("div", { className: "hint" }, "These are means across groups; use them to compare high/low risk behavior."),
-              React.createElement("table", { style: { marginTop: "10px" } },
-                React.createElement("thead", null,
-                  React.createElement("tr", null,
-                    React.createElement("th", null, "Group"),
-                    React.createElement("th", null, "Count"),
-                    React.createElement("th", null, "Mean churnProbability"),
-                    React.createElement("th", null, "Mean recency_days"),
-                    React.createElement("th", null, "Mean sessions_per_day")
-                  )
-                ),
-                React.createElement("tbody", null,
-                  (props.aggregates.groups || []).map((g, i) =>
-                    React.createElement("tr", { key: i },
-                      React.createElement("td", null, g.name),
-                      React.createElement("td", null, g.count),
-                      React.createElement("td", null, fmt((g.metricsMean || {}).churnProbability ?? 0, 4)),
-                      React.createElement("td", null, fmt((g.metricsMean || {}).recency_days ?? 0, 2)),
-                      React.createElement("td", null, fmt((g.metricsMean || {}).sessions_per_day ?? 0, 4))
-                    )
-                  )
-                )
-              )
+        const a = props.aggregates;
+        const imp = (a && a.globalFeatureImportance) || [];
+        const metricKeys = a ? ["churnProbability", "recency_days", "active_day_rate", ...imp.slice(0, 3).map(r => r.featureKey)]
+          .filter((k, i, arr) => arr.indexOf(k) === i && a.groups.some(g => k in g.metricsMean)) : [];
+        return h("div", { className: "card" },
+          h("h3", null, "Aggregate Insights"),
+          h("div", { className: "row" }, props.jobPill),
+          !props.ready && h("div", { className: "hint", style: { marginTop: "10px" } }, "Run an analysis first."),
+          props.aggError && h("div", { className: "error", style: { marginTop: "10px" } }, props.aggError),
+          props.ready && a && h("div", { className: "grid", style: { marginTop: "10px" } },
+            h("div", { className: "card" },
+              h("h3", null, "Group averages"),
+              h("div", { className: "hint" }, "Means across risk groups (users who already churned are shown separately)."),
+              h("div", { className: "tableWrap" }, h("table", { style: { marginTop: "10px" } },
+                h("thead", null, h("tr", null,
+                  h("th", null, "Group"), h("th", null, "Count"),
+                  metricKeys.map(k => h("th", { key: k }, a.metricLabels[k] || k))
+                )),
+                h("tbody", null, a.groups.map((g, i) => h("tr", { key: i },
+                  h("td", null, g.name), h("td", null, g.count),
+                  metricKeys.map(k => h("td", { key: k }, fmt(g.metricsMean[k], k === "churnProbability" ? 4 : 2)))
+                )))
+              ))
             ),
-            React.createElement("div", { className: "card" },
-              React.createElement("h3", null, "Global feature importance (mean |SHAP|)"),
-              (props.aggregates.globalFeatureImportance || []).length === 0
-                ? React.createElement("div", { className: "hint" }, "Not available (model not supervised or SHAP not installed).")
-                : React.createElement("table", null,
-                    React.createElement("thead", null,
-                      React.createElement("tr", null,
-                        React.createElement("th", null, "Feature"),
-                        React.createElement("th", null, "Importance")
-                      )
-                    ),
-                    React.createElement("tbody", null,
-                      (props.aggregates.globalFeatureImportance || []).slice(0, 15).map((r, i) =>
-                        React.createElement("tr", { key: i },
-                          React.createElement("td", { className: "mono" }, r.featureKey),
-                          React.createElement("td", null, fmt(r.importance, 6))
-                        )
-                      )
-                    )
-                  )
+            h("div", { className: "card" },
+              h("h3", null, "Global feature importance (mean |SHAP|)"),
+              imp.length === 0
+                ? h("div", { className: "hint" }, "Not available (no trained model for this run).")
+                : h("div", { className: "tableWrap" }, h("table", null,
+                    h("thead", null, h("tr", null, h("th", null, "Feature"), h("th", null, "Importance"))),
+                    h("tbody", null, imp.slice(0, 15).map((r, i) => h("tr", { key: i },
+                      h("td", null, r.displayName || r.featureKey, h("div", { className: "hint mono" }, r.featureKey)),
+                      h("td", null, fmt(r.importance, 4))
+                    )))
+                  ))
             )
           )
         );
       }
 
-      ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+      ReactDOM.createRoot(document.getElementById("root")).render(h(App));
     </script>
   </body>
 </html>
-

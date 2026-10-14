@@ -1,8 +1,21 @@
 fastapi
 uvicorn[standard]
-pydantic
+pydantic>=2
+python-multipart
 numpy
 pandas
 scikit-learn
 xgboost
-shap
+sqlalchemy>=2
+openpyxl
+pyarrow
+
+# tests
+pytest
+httpx
+
+# Optional database drivers (install only what you need):
+#   PostgreSQL:   psycopg[binary]        -> postgresql://user:pass@host:5432/db
+#   MySQL/Maria:  pymysql                -> mysql+pymysql://user:pass@host:3306/db
+#   SQL Server:   pyodbc                 -> mssql+pyodbc://user:pass@dsn
+#   Oracle:       oracledb               -> oracle+oracledb://user:pass@host:1521/?service_name=svc
