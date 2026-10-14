@@ -77,6 +77,7 @@ class DbValidateResponse(BaseModel):
     tables: List[DbTableInfo] = Field(default_factory=list)
     capabilities: DbCapabilities
     schemaMap: Dict[str, Any]
+    summary: Dict[str, Any] = Field(default_factory=dict)
 
 
 class UploadResponse(BaseModel):
@@ -140,6 +141,8 @@ class UserRow(BaseModel):
     riskTier: RiskTier
     status: str = "active"
     knownLabel: Optional[int] = None
+    recencyDays: Optional[int] = None
+    topReason: Optional[str] = None
 
 
 class UsersListResponse(BaseModel):

@@ -1,0 +1,4 @@
+# Only the static site is deployed; everything else stays out of the upload.
+/*
+!/site
+!/vercel.json

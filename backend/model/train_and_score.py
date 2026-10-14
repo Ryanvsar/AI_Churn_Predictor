@@ -5,7 +5,7 @@ XGBoost churn model with honest, time-aware validation.
 - Validation is the most recent labelled snapshot (or a held-out user split when there is only one),
   so reported metrics measure prediction of the *future*, not fit to the past.
 - A small hyper-parameter grid is searched with early stopping on that validation set.
-- Probabilities are calibrated (isotonic or Platt) on the validation predictions.
+- Probabilities are calibrated (Platt scaling) on the validation predictions.
 - The final model is refit on all snapshots and scores users as of the latest date — rows it never
   saw during training.
 - Per-user explanations are exact TreeSHAP values from XGBoost's built-in `pred_contribs`.
@@ -37,6 +37,7 @@ class ModelConfig:
     high_risk_threshold: float = 0.7
     random_state: int = 42
     max_snapshots: int = 12
+    quick: bool = False  # smaller search for slow environments (e.g. the in-browser engine)
 
 
 PARAM_GRID: List[Dict] = [
@@ -47,6 +48,7 @@ PARAM_GRID: List[Dict] = [
     {"max_depth": 4, "learning_rate": 0.05, "min_child_weight": 5, "balance": True},
     {"max_depth": 3, "learning_rate": 0.1, "min_child_weight": 10, "balance": True},
 ]
+QUICK_GRID: List[Dict] = PARAM_GRID[:2]
 
 
 def risk_tier(prob: float, med_threshold: float, high_threshold: float) -> str:
@@ -58,7 +60,7 @@ def risk_tier(prob: float, med_threshold: float, high_threshold: float) -> str:
 
 
 class Calibrator:
-    """Maps raw model probabilities to calibrated ones (isotonic when data allows, else Platt)."""
+    """Maps raw model probabilities to calibrated ones (Platt scaling by default; isotonic optional)."""
 
     def __init__(self, method: str):
         self.method = method
@@ -84,8 +86,10 @@ class Calibrator:
 
     @staticmethod
     def choose(y: np.ndarray) -> str:
-        pos = int(np.sum(y))
-        return "isotonic" if min(pos, len(y) - pos) >= 100 else "sigmoid"
+        # Sigmoid (Platt) scaling is smooth, so it keeps every user's ranking distinct. Isotonic
+        # regression is a step function that ties many users at the same probability, which makes a
+        # risk leaderboard hard to act on, so it is only used on request.
+        return "sigmoid"
 
 
 def classification_metrics(y: np.ndarray, p: np.ndarray, threshold: float) -> Dict[str, float]:
@@ -149,7 +153,8 @@ class TrainedModel:
         return self.booster.predict_proba(X[self.features])[:, 1]
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
-        return np.clip(self.calibrator.transform(self.predict_raw(X)), 0.0, 1.0)
+        # A behavioural model is never certain; keep probabilities off the 0%/100% extremes.
+        return np.clip(self.calibrator.transform(self.predict_raw(X)), 0.005, 0.99)
 
     def contributions(self, X: pd.DataFrame) -> np.ndarray:
         """Exact TreeSHAP values in log-odds space; last column is the bias term."""
@@ -179,7 +184,7 @@ def train(
         raise ValueError("Training or validation data contains only one class.")
 
     best = None
-    for params in PARAM_GRID:
+    for params in (QUICK_GRID if config.quick else PARAM_GRID):
         m = _xgb(params, 2000, y_tr, config.random_state, early_stopping=True)
         m.fit(X_tr, y_tr, eval_set=[(X_va, y_va)], verbose=False)
         p = m.predict_proba(X_va)[:, 1]

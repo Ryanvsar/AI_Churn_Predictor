@@ -1,0 +1,995 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Churn Predictor</title>
+<meta name="description" content="Drop your app's user database and see which users are about to churn. Runs in your browser — your data is never uploaded." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23111'/%3E%3Crect x='3' y='9' width='2' height='4' fill='%23fff'/%3E%3Crect x='7' y='6' width='2' height='7' fill='%23fff'/%3E%3Crect x='11' y='3' width='2' height='10' fill='%23e5484d'/%3E%3C/svg%3E" />
+<style>
+  :root {
+    --bg: #f3f4f6;
+    --surface: #ffffff;
+    --surface-2: #f8f9fa;
+    --border: #d6d9de;
+    --border-strong: #b4b9c1;
+    --text: #111418;
+    --muted: #5b6470;
+    --accent: #1d4ed8;
+    --accent-text: #ffffff;
+    --accent-soft: #e6edfb;
+    --high: #c8262c;
+    --medium: #b45d00;
+    --low: #23803a;
+    --churned: #7a828c;
+    --high-soft: #fbe9ea;
+    --medium-soft: #fdf0e1;
+    --low-soft: #e6f4ea;
+    --focus: #1d4ed8;
+    --shade: rgba(200, 38, 44, 0.08);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0c0e11; --surface: #14171c; --surface-2: #1a1e24; --border: #2a3038; --border-strong: #3b434e;
+      --text: #e8eaed; --muted: #9aa3ad; --accent: #5b8cff; --accent-text: #0c0e11; --accent-soft: #1b2740;
+      --high: #ff6b6f; --medium: #f0a24a; --low: #4cc46a; --churned: #8a929c;
+      --high-soft: #3a1a1c; --medium-soft: #3a2a14; --low-soft: #15301d; --focus: #5b8cff; --shade: rgba(255, 107, 111, 0.10);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c0e11; --surface: #14171c; --surface-2: #1a1e24; --border: #2a3038; --border-strong: #3b434e;
+    --text: #e8eaed; --muted: #9aa3ad; --accent: #5b8cff; --accent-text: #0c0e11; --accent-soft: #1b2740;
+    --high: #ff6b6f; --medium: #f0a24a; --low: #4cc46a; --churned: #8a929c;
+    --high-soft: #3a1a1c; --medium-soft: #3a2a14; --low-soft: #15301d; --focus: #5b8cff; --shade: rgba(255, 107, 111, 0.10);
+    color-scheme: dark;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; border-radius: 0 !important; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+
+  /* ---------- top bar ---------- */
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); }
+  .topbar .wrap { display: flex; align-items: center; gap: 12px; min-height: 56px; flex-wrap: wrap; padding-top: 8px; padding-bottom: 8px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
+  .brand-mark { width: 22px; height: 22px; background: var(--text); display: grid; grid-template-columns: repeat(3, 1fr); align-items: end; gap: 2px; padding: 4px; }
+  .brand-mark i { display: block; background: var(--surface); }
+  .brand-mark i:nth-child(1) { height: 5px; } .brand-mark i:nth-child(2) { height: 9px; } .brand-mark i:nth-child(3) { height: 13px; background: var(--high); }
+  .spacer { flex: 1; }
+  .meta { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+
+  /* ---------- buttons & inputs ---------- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 38px; padding: 0 14px; border: 1px solid var(--border-strong); background: var(--surface);
+    font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  .btn:hover { background: var(--surface-2); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.ghost { border-color: transparent; background: transparent; }
+  .btn.ghost:hover { background: var(--surface-2); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn.sm { min-height: 30px; padding: 0 10px; font-size: 13px; }
+  input[type="text"], input[type="search"], input[type="number"], select {
+    min-height: 38px; padding: 0 10px; border: 1px solid var(--border-strong); background: var(--surface); width: 100%;
+  }
+  input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+  label.check { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+
+  /* ---------- boxes ---------- */
+  .box { background: var(--surface); border: 1px solid var(--border); }
+  .box-h { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .box-h h2 { margin: 0; font-size: 15px; font-weight: 700; }
+  .box-h .sub { color: var(--muted); font-size: 13px; }
+  .box-b { padding: 16px; }
+  .label { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .muted { color: var(--muted); }
+  .small { font-size: 12px; }
+  .grid { display: grid; gap: 16px; }
+  .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 900px) { .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .g2 { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 480px) { .g4 { grid-template-columns: minmax(0, 1fr); } }
+  main { padding: 24px 0 48px; }
+  .stack > * + * { margin-top: 16px; }
+
+  /* ---------- start screen ---------- */
+  .hero { max-width: 760px; margin: 24px auto 0; }
+  .hero h1 { font-size: 30px; line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.02em; }
+  .hero p.lead { margin: 0 0 20px; color: var(--muted); font-size: 15px; }
+  .drop {
+    border: 2px dashed var(--border-strong); background: var(--surface); padding: 40px 20px; text-align: center; cursor: pointer;
+  }
+  .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+  .drop .big { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .drop .formats { margin-top: 12px; color: var(--muted); font-size: 12px; }
+  .demos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border: 1px solid var(--border); background: var(--surface); }
+  @media (max-width: 760px) { .demos { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .demo { text-align: left; padding: 14px; border: 0; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--surface); cursor: pointer; margin: 0 -1px -1px 0; }
+  .demo:hover { background: var(--surface-2); }
+  .demo b { display: block; font-size: 14px; margin-bottom: 4px; }
+  .demo span { color: var(--muted); font-size: 12px; display: block; }
+  .demo em { font-style: normal; color: var(--accent); font-size: 12px; font-weight: 600; display: block; margin-top: 8px; }
+  .found-line { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .found-line:last-child { border-bottom: 0; }
+  .found-line .k { width: 110px; flex: none; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .bar-track { height: 10px; background: var(--surface-2); border: 1px solid var(--border); }
+  .bar-fill { height: 100%; background: var(--accent); transition: width 0.3s; }
+  .error { border: 1px solid var(--high); background: var(--high-soft); padding: 12px 14px; }
+  .note { border: 1px solid var(--border); background: var(--surface-2); padding: 10px 12px; font-size: 13px; }
+  .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .fields { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  .act { border: 1px solid var(--border); padding: 12px; }
+  .act + .act { margin-top: 8px; }
+  .checks { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+
+  /* ---------- KPIs ---------- */
+  .kpi { padding: 16px; }
+  .kpi .v { font-size: 32px; font-weight: 750; letter-spacing: -0.02em; line-height: 1.1; margin-top: 6px; }
+  .kpi .d { margin-top: 6px; color: var(--muted); font-size: 13px; }
+  .grade { display: inline-block; padding: 2px 8px; font-size: 13px; font-weight: 700; border: 1px solid currentColor; }
+
+  /* ---------- horizontal bar charts ---------- */
+  .hbar { display: grid; grid-template-columns: minmax(90px, 34%) minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 7px 0; }
+  .hbar.clickable { cursor: pointer; }
+  .hbar.clickable:hover .hbar-name { text-decoration: underline; }
+  .hbar.active .hbar-name { font-weight: 700; }
+  .hbar-name { overflow-wrap: anywhere; font-size: 13px; }
+  .hbar-track { height: 22px; background: var(--surface-2); border: 1px solid var(--border); }
+  .hbar-fill { height: 100%; }
+  .hbar-val { text-align: right; font-size: 13px; font-weight: 600; white-space: nowrap; min-width: 56px; }
+  .swatch { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: baseline; }
+
+  /* ---------- table ---------- */
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .toolbar input[type="search"] { width: 240px; max-width: 100%; }
+  .seg { display: inline-flex; border: 1px solid var(--border-strong); }
+  .seg button { border: 0; border-right: 1px solid var(--border-strong); background: var(--surface); padding: 0 12px; min-height: 36px; cursor: pointer; font-weight: 600; font-size: 13px; }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: var(--text); color: var(--surface); }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 700; padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+  td { padding: 11px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover, tbody tr:focus-visible { background: var(--surface-2); }
+  .risk { display: flex; align-items: center; gap: 10px; }
+  .risk .t { width: 80px; height: 8px; background: var(--surface-2); border: 1px solid var(--border); flex: none; }
+  .risk .t i { display: block; height: 100%; }
+  .risk b { width: 46px; text-align: right; font-weight: 700; }
+  .lvl { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; white-space: nowrap; }
+  .lvl i { width: 10px; height: 10px; display: inline-block; }
+  .reason { color: var(--muted); font-size: 13px; }
+  .more { padding: 12px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .uid { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; overflow-wrap: anywhere; }
+  @media (max-width: 760px) {
+    thead { display: none; }
+    tbody tr { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+    td { padding: 0; border: 0; }
+    td.c-risk { grid-column: 1 / -1; }
+    td.c-reason { grid-column: 1 / -1; }
+  }
+
+  details.acc > summary { cursor: pointer; list-style: none; padding: 14px 16px; font-weight: 700; display: flex; justify-content: space-between; gap: 8px; }
+  details.acc > summary::-webkit-details-marker { display: none; }
+  details.acc > summary::after { content: "+"; font-weight: 700; color: var(--muted); }
+  details.acc[open] > summary::after { content: "−"; }
+  details.acc[open] > summary { border-bottom: 1px solid var(--border); }
+  .mtable td, .mtable th { padding: 8px 12px; }
+  .mtable tbody tr { cursor: default; }
+
+  /* ---------- user panel ---------- */
+  .scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); z-index: 20; }
+  .panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100vw); background: var(--surface);
+    border-left: 1px solid var(--border-strong); z-index: 21; overflow-y: auto; display: flex; flex-direction: column;
+  }
+  .panel-h { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 1; }
+  .panel-sec { padding: 16px; border-bottom: 1px solid var(--border); }
+  .bigrisk { font-size: 44px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+  .factor { display: grid; grid-template-columns: 20px minmax(0, 1fr) 90px; gap: 8px; align-items: center; padding: 7px 0; }
+  .factor .arrow { font-weight: 800; text-align: center; }
+  .factor .ft { height: 8px; background: var(--surface-2); border: 1px solid var(--border); }
+  .factor .ft i { display: block; height: 100%; }
+  .mgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; border: 1px solid var(--border); }
+  .mgrid > div { padding: 10px 12px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 0 -1px -1px 0; }
+  .mgrid .mv { font-weight: 700; font-size: 16px; margin-top: 2px; }
+  svg text { fill: var(--muted); font-size: 11px; }
+
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .center { text-align: center; }
+  footer { color: var(--muted); font-size: 12px; padding: 24px 0 40px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<noscript><p style="padding:16px">This app needs JavaScript.</p></noscript>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script>
+"use strict";
+const { useEffect, useMemo, useRef, useState, useCallback } = React;
+const h = React.createElement;
+
+/* =============================================================================================
+ * Formatting helpers
+ * ===========================================================================================*/
+const TIERS = ["High", "Medium", "Low"];
+const tierColor = (t, status) => status === "churned" ? "var(--churned)" : t === "High" ? "var(--high)" : t === "Medium" ? "var(--medium)" : "var(--low)";
+const tierName = (t, status) => status === "churned" ? "Churned" : t;
+const fmtInt = (n) => (n === null || n === undefined || !isFinite(n)) ? "n/a" : Math.round(n).toLocaleString();
+function pct(p, digits) {
+  if (p === null || p === undefined || !isFinite(p)) return "n/a";
+  const v = p * 100;
+  if (v > 0 && v < 0.1) return "<0.1%";
+  if (v > 99 && v < 100) return ">99%";
+  const d = digits !== undefined ? digits : (v < 10 ? 1 : 0);
+  return v.toFixed(d) + "%";
+}
+function ago(days) {
+  if (days === null || days === undefined || !isFinite(days)) return "n/a";
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  return `${days} days ago`;
+}
+function fmtDate(iso) {
+  if (!iso) return "n/a";
+  const d = new Date(iso + "T00:00:00Z");
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+function fmtMetric(key, v) {
+  if (v === null || v === undefined || !isFinite(v)) return "n/a";
+  const k = key.toLowerCase();
+  if (/(rate|share)$/.test(k) || /_rate|_share/.test(k)) return pct(v);
+  if (/recency_days|tenure|gap_|_days$|streak/.test(k)) return `${Math.round(v * 10) / 10} days`;
+  if (Math.abs(v) >= 1000) return fmtInt(v);
+  return (Math.round(v * 100) / 100).toString();
+}
+
+/* =============================================================================================
+ * Engines: browser (Pyodide worker), server (FastAPI) and demo (precomputed JSON)
+ * ===========================================================================================*/
+function BrowserEngine() {
+  let worker = null, seq = 0;
+  const pending = new Map();
+  let onProgress = () => {};
+  function start() {
+    if (worker) return;
+    const py = new URLSearchParams(location.search).get("pyodide");
+    worker = new Worker("worker.js" + (py ? "?pyodide=" + encodeURIComponent(py) : ""));
+    worker.onmessage = (ev) => {
+      const m = ev.data;
+      if (m.type === "progress") { onProgress(m.p, m.msg); return; }
+      const p = pending.get(m.id);
+      if (!p) return;
+      pending.delete(m.id);
+      m.ok ? p.resolve(m.result) : p.reject(new Error(m.error));
+    };
+    worker.onerror = (e) => {
+      for (const p of pending.values()) p.reject(new Error(e.message || "The analysis engine failed to start."));
+      pending.clear();
+    };
+  }
+  function call(method, args, transfer) {
+    start();
+    return new Promise((resolve, reject) => {
+      const id = ++seq;
+      pending.set(id, { resolve, reject });
+      worker.postMessage({ id, method, args }, transfer || []);
+    });
+  }
+  return {
+    kind: "browser",
+    setProgress(fn) { onProgress = fn || (() => {}); },
+    warmUp() { return call("init").catch(() => {}); },
+    async detectFile(file) {
+      const buffer = await file.arrayBuffer();
+      return call("detect", { name: file.name, buffer }, [buffer]);
+    },
+    analyze(options) { return call("analyze", options); },
+    user(id) { return call("user", { id }); },
+    exportCsv() { return call("exportCsv"); },
+  };
+}
+
+function ServerEngine() {
+  let onProgress = () => {};
+  let jobId = null;
+  async function req(path, opts) {
+    const res = await fetch(path, opts);
+    const txt = await res.text();
+    let json = null;
+    try { json = txt ? JSON.parse(txt) : null; } catch (e) { json = null; }
+    if (!res.ok) {
+      let d = json && json.detail;
+      if (Array.isArray(d)) d = d.map((x) => x.msg || JSON.stringify(x)).join("; ");
+      throw new Error(d || txt || `HTTP ${res.status}`);
+    }
+    return json !== null ? json : txt;
+  }
+  const post = (path, body) => req(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  let source = null;
+  return {
+    kind: "server",
+    setProgress(fn) { onProgress = fn || (() => {}); },
+    warmUp() { return Promise.resolve(); },
+    async detectFile(file) {
+      onProgress(0.05, "Uploading file");
+      const fd = new FormData();
+      fd.append("file", file);
+      const up = await req("/db/upload", { method: "POST", body: fd });
+      source = up.path;
+      onProgress(0.15, "Understanding the database");
+      const out = await post("/db/validate", { source });
+      out.source = file.name;
+      return out;
+    },
+    async detectUrl(url) {
+      source = url;
+      onProgress(0.1, "Connecting to the database");
+      return post("/db/validate", { source });
+    },
+    async analyze(o) {
+      const body = { source, threshold: 0.4, labelSource: o.label_source || "auto" };
+      if (o.schema_map) body.schemaMap = o.schema_map;
+      if (o.churn_window_days) body.churnWindowDays = o.churn_window_days;
+      jobId = (await post("/analysis/run", body)).jobId;
+      for (;;) {
+        await new Promise((r) => setTimeout(r, 700));
+        const s = await req(`/analysis/jobs/${jobId}`);
+        onProgress(0.2 + 0.8 * (s.progress || 0), s.message || "Working");
+        if (s.status === "failed") throw new Error((s.error || "Analysis failed").split("\n")[0]);
+        if (s.status === "succeeded") break;
+      }
+      return req(`/analysis/${jobId}/result`);
+    },
+    user(id) { return req(`/analysis/${jobId}/users/${encodeURIComponent(id)}/bundle`); },
+    exportCsv() { return req(`/analysis/${jobId}/export.csv`); },
+  };
+}
+
+const DEMO_LIST = [
+  { key: "learning_app", title: "Language learning app", desc: "Duolingo-style · learners, lessons, badges" },
+  { key: "navigation_app", title: "Navigation app", desc: "Waze-style · drivers, trips, road reports" },
+  { key: "saas_app", title: "SaaS product", desc: "Accounts, sessions and in-app events" },
+  { key: "app_usage", title: "Original demo", desc: "5,000 users with a churn label column" },
+];
+
+async function loadDemo(key) {
+  const res = await fetch(`demo/${key}.json`);
+  if (!res.ok) throw new Error("Could not load the demo data.");
+  return res.json();
+}
+
+function csvFromUsers(users) {
+  const esc = (v) => { const s = v === null || v === undefined ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const rows = [["user_id", "churn_probability", "risk_level", "status", "days_since_last_activity", "main_reason"]];
+  for (const u of users) rows.push([u.userId, u.risk.toFixed(4), tierName(u.tier, u.status), u.status, u.recencyDays, u.topReason || ""]);
+  return rows.map((r) => r.map(esc).join(",")).join("\n") + "\n";
+}
+
+function download(text, name) {
+  const url = URL.createObjectURL(new Blob([text], { type: "text/csv" }));
+  const a = document.createElement("a");
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/* =============================================================================================
+ * App
+ * ===========================================================================================*/
+function App() {
+  const [engine, setEngine] = useState(null);
+  const [theme, setTheme] = useState(() => { try { return localStorage.getItem("theme") || ""; } catch (e) { return ""; } });
+  const [phase, setPhase] = useState("start"); // start | detecting | found | analyzing | dashboard
+  const [fileName, setFileName] = useState("");
+  const [detection, setDetection] = useState(null);
+  const [mapping, setMapping] = useState(null);
+  const [settings, setSettings] = useState({ churnWindow: "", labelSource: "auto" });
+  const [progress, setProgress] = useState({ p: 0, msg: "" });
+  const [error, setError] = useState("");
+  const [result, setResult] = useState(null);
+  const [demo, setDemo] = useState(null); // precomputed demo payload when viewing a demo
+  const [selected, setSelected] = useState(null);
+  const startedAt = useRef(0);
+
+  useEffect(() => {
+    if (theme) document.documentElement.setAttribute("data-theme", theme);
+    else document.documentElement.removeAttribute("data-theme");
+    try { theme ? localStorage.setItem("theme", theme) : localStorage.removeItem("theme"); } catch (e) { /* ignore */ }
+  }, [theme]);
+
+  // Pick the engine: the FastAPI server if this page is served by it, otherwise the browser.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let eng = null;
+      try {
+        const r = await fetch("engine.json", { cache: "no-store" });
+        const j = r.ok ? await r.json() : null;
+        if (j && j.engine === "server") eng = ServerEngine();
+      } catch (e) { /* static hosting */ }
+      if (!eng) eng = BrowserEngine();
+      if (cancelled) return;
+      eng.setProgress((p, msg) => setProgress({ p, msg }));
+      setEngine(eng);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const reset = () => {
+    setPhase("start"); setDetection(null); setMapping(null); setResult(null); setDemo(null);
+    setSelected(null); setError(""); setFileName(""); setProgress({ p: 0, msg: "" });
+  };
+
+  async function onFile(file) {
+    if (!engine || !file) return;
+    setError(""); setDemo(null); setResult(null); setFileName(file.name);
+    setPhase("detecting"); startedAt.current = Date.now();
+    setProgress({ p: 0.02, msg: engine.kind === "browser" ? "Loading the analysis engine" : "Uploading file" });
+    try {
+      const det = await engine.detectFile(file);
+      setDetection(det); setMapping(JSON.parse(JSON.stringify(det.schemaMap)));
+      setPhase("found");
+      if (!det.ok) setError("No table with a date/time column linked to users was found. Click “Adjust” to pick one.");
+    } catch (e) {
+      setError(String(e.message || e)); setPhase("start");
+    }
+  }
+
+  async function onUrl(url) {
+    if (!engine || !url) return;
+    setError(""); setDemo(null); setFileName(url.replace(/:\/\/[^@]*@/, "://***@"));
+    setPhase("detecting"); startedAt.current = Date.now();
+    try {
+      const det = await engine.detectUrl(url);
+      setDetection(det); setMapping(JSON.parse(JSON.stringify(det.schemaMap)));
+      setPhase("found");
+    } catch (e) { setError(String(e.message || e)); setPhase("start"); }
+  }
+
+  async function onAnalyze() {
+    setError(""); setPhase("analyzing"); startedAt.current = Date.now();
+    setProgress({ p: 0.2, msg: "Starting analysis" });
+    const opts = { label_source: settings.labelSource, schema_map: mapping };
+    if (String(settings.churnWindow).trim()) opts.churn_window_days = Number(settings.churnWindow);
+    try {
+      const res = await engine.analyze(opts);
+      setResult(res); setPhase("dashboard"); window.scrollTo(0, 0);
+    } catch (e) { setError(String(e.message || e)); setPhase("found"); }
+  }
+
+  async function onDemo(key) {
+    setError(""); setPhase("detecting"); setProgress({ p: 0.5, msg: "Loading demo" });
+    try {
+      const d = await loadDemo(key);
+      setDemo(d); setFileName(d.fileName); setResult(d.result); setDetection(null);
+      setPhase("dashboard"); window.scrollTo(0, 0);
+    } catch (e) { setError(String(e.message || e)); setPhase("start"); }
+  }
+
+  const fetchUser = useCallback(async (id) => {
+    if (demo) {
+      const b = demo.bundles[id];
+      if (!b) throw new Error("Full details for this user aren't included in the demo. Drop your own file to explore every user.");
+      return b;
+    }
+    return engine.user(id);
+  }, [demo, engine]);
+
+  async function onExport() {
+    const name = (fileName || "results").replace(/\.[^.]+$/, "").replace(/[^0-9A-Za-z_-]+/g, "_") + "_churn.csv";
+    const text = demo ? csvFromUsers(result.users) : await engine.exportCsv();
+    download(text, name);
+  }
+
+  const isDark = theme ? theme === "dark" : !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const toggleTheme = () => setTheme(isDark ? "light" : "dark");
+
+  return h(React.Fragment, null,
+    h("header", { className: "topbar" },
+      h("div", { className: "wrap" },
+        h("button", { className: "brand btn ghost", onClick: reset, "aria-label": "Churn Predictor home", style: { padding: 0, minHeight: 0 } },
+          h("span", { className: "brand-mark", "aria-hidden": true }, h("i"), h("i"), h("i")), "Churn Predictor"),
+        phase === "dashboard" && result && h("span", { className: "meta" },
+          `${fileName}${demo ? " (demo)" : ""} · scored as of ${fmtDate(result.overview.scoringDate)}`),
+        h("span", { className: "spacer" }),
+        phase === "dashboard" && h("button", { className: "btn sm", onClick: onExport }, "Download CSV"),
+        phase === "dashboard" && h("button", { className: "btn sm", onClick: reset }, "New analysis"),
+        h("button", { className: "btn sm ghost", onClick: toggleTheme, "aria-label": "Switch between light and dark theme" }, isDark ? "Light mode" : "Dark mode")
+      )
+    ),
+    h("main", null,
+      h("div", { className: "wrap" },
+        phase !== "dashboard"
+          ? h(Start, {
+              engine, phase, fileName, detection, mapping, setMapping, settings, setSettings,
+              progress, error, startedAt: startedAt.current, onFile, onUrl, onAnalyze, onDemo, reset,
+            })
+          : h(Dashboard, { result, demo: !!demo, onSelect: setSelected })
+      )
+    ),
+    selected && h(UserPanel, { id: selected, fetchUser, windowDays: result && result.overview.windowDays, onClose: () => setSelected(null) })
+  );
+}
+
+/* =============================================================================================
+ * Start screen
+ * ===========================================================================================*/
+function Start(props) {
+  const { engine, phase, detection, error } = props;
+  const [over, setOver] = useState(false);
+  const [showUrl, setShowUrl] = useState(false);
+  const [url, setUrl] = useState("");
+  const fileRef = useRef(null);
+  const busy = phase === "detecting" || phase === "analyzing";
+
+  useEffect(() => { if (engine && engine.kind === "browser") engine.warmUp(); }, [engine]);
+
+  const pick = () => fileRef.current && fileRef.current.click();
+  const onDrop = (e) => { e.preventDefault(); setOver(false); if (!busy && e.dataTransfer.files[0]) props.onFile(e.dataTransfer.files[0]); };
+
+  return h("div", { className: "hero stack" },
+    h("div", null,
+      h("h1", null, "Find out which users are about to churn"),
+      h("p", { className: "lead" }, engine && engine.kind === "server"
+        ? "Drop your app's database or connect to it. Analysis runs on this server."
+        : "Drop your app's database. Everything runs in your browser — your file is never uploaded.")
+    ),
+    error && h("div", { className: "error", role: "alert" }, error),
+
+    (phase === "start" || phase === "detecting") && h(React.Fragment, null,
+      h("div", {
+        className: "drop" + (over ? " over" : ""), role: "button", tabIndex: 0,
+        "aria-label": "Choose a database file to analyse",
+        onClick: () => !busy && pick(),
+        onKeyDown: (e) => { if ((e.key === "Enter" || e.key === " ") && !busy) { e.preventDefault(); pick(); } },
+        onDragOver: (e) => { e.preventDefault(); setOver(true); }, onDragLeave: () => setOver(false), onDrop,
+      },
+        busy
+          ? h(Progress, { progress: props.progress, startedAt: props.startedAt, firstRun: engine && engine.kind === "browser" })
+          : h(React.Fragment, null,
+              h("div", { className: "big" }, "Drop your database file here"),
+              h("div", { className: "muted" }, "or"),
+              h("div", { style: { marginTop: 10 } }, h("span", { className: "btn primary" }, "Choose file")),
+              h("div", { className: "formats" }, "SQLite (.db, .sqlite) · CSV / TSV · Excel · Parquet · or a .zip of them")
+            ),
+        h("input", { ref: fileRef, type: "file", hidden: true, accept: ".db,.sqlite,.sqlite3,.db3,.csv,.tsv,.txt,.xlsx,.xls,.parquet,.zip",
+          onChange: (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) props.onFile(f); } })
+      ),
+      engine && engine.kind === "server" && !busy && h("div", null,
+        !showUrl
+          ? h("button", { className: "btn ghost sm", onClick: () => setShowUrl(true) }, "Connect with a database URL instead")
+          : h("div", { className: "actions" },
+              h("input", { type: "text", value: url, placeholder: "postgresql://user:password@host:5432/db", onChange: (e) => setUrl(e.target.value), style: { flex: "1 1 300px" } }),
+              h("button", { className: "btn", disabled: !url.trim(), onClick: () => props.onUrl(url.trim()) }, "Connect"))
+      ),
+      !busy && h("div", null,
+        h("div", { className: "label", style: { marginBottom: 8 } }, "Or explore an example"),
+        h("div", { className: "demos" },
+          DEMO_LIST.map((d) => h("button", { key: d.key, className: "demo", onClick: () => props.onDemo(d.key) },
+            h("b", null, d.title), h("span", null, d.desc), h("em", null, "Open example →"))))
+      )
+    ),
+
+    (phase === "found" || phase === "analyzing") && detection && h(Found, props)
+  );
+}
+
+function Progress({ progress, startedAt, firstRun, inline }) {
+  const [, tick] = useState(0);
+  useEffect(() => { const t = setInterval(() => tick((x) => x + 1), 1000); return () => clearInterval(t); }, []);
+  const secs = startedAt ? Math.round((Date.now() - startedAt) / 1000) : 0;
+  return h("div", { style: { maxWidth: 560, margin: inline ? 0 : "0 auto", textAlign: "left" }, role: "status", "aria-live": "polite" },
+    h("div", { style: { display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 8 } },
+      h("b", null, (progress.msg || "Working") + "…"),
+      h("span", { className: "muted num" }, `${secs}s`)),
+    h("div", { className: "bar-track" }, h("div", { className: "bar-fill", style: { width: `${Math.max(3, Math.min(100, progress.p * 100))}%` } })),
+    firstRun && h("div", { className: "muted small", style: { marginTop: 8 } },
+      "The first run downloads the analysis engine (about 30 MB). Later runs start much faster.")
+  );
+}
+
+function Found(props) {
+  const { detection, mapping, settings, setSettings, phase } = props;
+  const [adjust, setAdjust] = useState(!detection.ok);
+  const s = detection.summary || {};
+  const acts = (mapping.activities || []).filter((a) => a.enabled);
+  const busy = phase === "analyzing";
+  const lines = [
+    ["File", h("span", null, h("b", null, props.fileName))],
+    ["Users", s.userTable
+      ? h("span", null, h("b", null, fmtInt(s.userCount)), " users in ", h("code", null, s.userTable))
+      : h("span", null, "Identified from the user id column in the activity tables")],
+    ["Activity", acts.length
+      ? h("span", null, (s.activities || []).filter((a) => acts.some((x) => x.table === a.table)).map((a, i) =>
+          h("span", { key: a.table }, i ? "; " : "", h("b", null, a.table), ` (${fmtInt(a.rows)} rows${a.dateRange ? `, ${fmtDate(a.dateRange[0])} → ${fmtDate(a.dateRange[1])}` : ""})`)))
+      : h("span", { style: { color: "var(--high)" } }, "None found — click Adjust to choose a table and its date column")],
+    ["Churn", settings.labelSource !== "derived" && s.hasLabel
+      ? h("span", null, "Uses the label column ", h("code", null, s.labelColumn))
+      : h("span", null, settings.churnWindow ? h("b", null, `${settings.churnWindow} days without activity`) : h("b", null, "No activity for a while"),
+          settings.churnWindow ? "" : " — the exact number of days is learned from how often your users come back")],
+  ];
+  return h("div", { className: "box" },
+    h("div", { className: "box-h" }, h("h2", null, "Here's what we found")),
+    h("div", { className: "box-b" },
+      lines.map(([k, v]) => h("div", { className: "found-line", key: k }, h("div", { className: "k label" }, k), h("div", null, v))),
+      busy
+        ? h("div", { style: { marginTop: 16 } }, h(Progress, { progress: props.progress, startedAt: props.startedAt, firstRun: false, inline: true }))
+        : h("div", { className: "actions", style: { marginTop: 16 } },
+            h("button", { className: "btn primary", onClick: props.onAnalyze, disabled: !acts.length }, "Analyze"),
+            h("button", { className: "btn", onClick: () => setAdjust(!adjust), "aria-expanded": adjust }, adjust ? "Hide settings" : "Adjust"),
+            h("button", { className: "btn ghost", onClick: props.reset }, "Choose another file")),
+      adjust && !busy && h(Adjust, { detection, mapping, setMapping: props.setMapping, settings, setSettings })
+    )
+  );
+}
+
+function Adjust({ detection, mapping, setMapping, settings, setSettings }) {
+  const tables = detection.tables || [];
+  const byName = useMemo(() => Object.fromEntries(tables.map((t) => [t.name, t])), [tables]);
+  const upd = (fn) => { const m = JSON.parse(JSON.stringify(mapping)); fn(m); setMapping(m); };
+  const userT = mapping.user_table ? byName[mapping.user_table] : null;
+  const unused = tables.filter((t) => t.name !== mapping.user_table && !mapping.activities.some((a) => a.table === t.name));
+
+  function addActivity(name) {
+    const t = byName[name]; if (!t) return;
+    const time = t.columns.find((c) => c.timeFormat) || t.columns[0];
+    const uc = t.columns.find((c) => c.name === mapping.user_id_column) || t.columns.find((c) => /id$/i.test(c.name) && !c.pk) || t.columns[0];
+    upd((m) => m.activities.push({
+      table: name, user_column: uc.name, time_column: time.name, time_format: time.timeFormat || "iso",
+      measures: t.columns.filter((c) => c.kind === "numeric" && !c.pk && !/id$/i.test(c.name) && !c.timeFormat).map((c) => c.name).slice(0, 8),
+      categoricals: [], via: null, enabled: true, confidence: null, reason: "added manually",
+    }));
+  }
+
+  return h("div", { style: { marginTop: 20, borderTop: "1px solid var(--border)", paddingTop: 16 } },
+    h("div", { className: "fields" },
+      h("label", { className: "field" }, h("span", { className: "label" }, "Churn after (days without activity)"),
+        h("input", { type: "number", min: 1, max: 365, placeholder: "Automatic", value: settings.churnWindow,
+          onChange: (e) => setSettings({ ...settings, churnWindow: e.target.value }) })),
+      h("label", { className: "field" }, h("span", { className: "label" }, "Churn definition"),
+        h("select", { value: settings.labelSource, onChange: (e) => setSettings({ ...settings, labelSource: e.target.value }) },
+          h("option", { value: "auto" }, "Automatic"),
+          h("option", { value: "explicit" }, "Use the label column"),
+          h("option", { value: "derived" }, "Days without activity"))),
+      h("label", { className: "field" }, h("span", { className: "label" }, "Users table"),
+        h("select", { value: mapping.user_table || "", onChange: (e) => upd((m) => {
+          m.user_table = e.target.value || null;
+          const t = byName[e.target.value];
+          m.user_id_column = t ? (t.primaryKey[0] || t.columns[0].name) : null;
+          m.signup_column = null; m.static_categoricals = []; m.static_numerics = [];
+          if (m.label && m.label.table !== m.user_table) m.label = null;
+        }) },
+          h("option", { value: "" }, "None (ids come from activity)"),
+          tables.map((t) => h("option", { key: t.name, value: t.name }, t.name)))),
+      userT && h("label", { className: "field" }, h("span", { className: "label" }, "User id column"),
+        h("select", { value: mapping.user_id_column || "", onChange: (e) => upd((m) => { m.user_id_column = e.target.value; }) },
+          userT.columns.map((c) => h("option", { key: c.name, value: c.name }, c.name))))
+    ),
+    h("div", { className: "label", style: { margin: "18px 0 8px" } }, "Activity tables"),
+    mapping.activities.map((a, i) => {
+      const t = byName[a.table]; if (!t) return null;
+      const set = (fn) => upd((m) => fn(m.activities[i]));
+      return h("div", { className: "act", key: a.table },
+        h("div", { className: "actions" },
+          h("label", { className: "check" }, h("input", { type: "checkbox", checked: a.enabled, onChange: (e) => set((x) => { x.enabled = e.target.checked; }) }), h("b", null, a.table)),
+          h("span", { className: "muted small" }, `${fmtInt(t.rowCount)} rows`),
+          h("span", { className: "spacer" }),
+          h("button", { className: "btn ghost sm", onClick: () => upd((m) => { m.activities.splice(i, 1); }) }, "Remove")),
+        a.enabled && h("div", { className: "fields", style: { marginTop: 10 } },
+          a.via
+            ? h("div", { className: "field" }, h("span", { className: "label" }, "Linked to users through"), h("span", null, `${a.via.table}.${a.via.user_column}`))
+            : h("label", { className: "field" }, h("span", { className: "label" }, "User id column"),
+                h("select", { value: a.user_column || "", onChange: (e) => set((x) => { x.user_column = e.target.value; }) },
+                  t.columns.map((c) => h("option", { key: c.name, value: c.name }, c.name)))),
+          h("label", { className: "field" }, h("span", { className: "label" }, "Date / time column"),
+            h("select", { value: a.time_column, onChange: (e) => set((x) => {
+              x.time_column = e.target.value;
+              const c = t.columns.find((cc) => cc.name === e.target.value);
+              x.time_format = (c && c.timeFormat) || "iso";
+            }) }, t.columns.map((c) => h("option", { key: c.name, value: c.name }, c.name + (c.timeFormat ? "" : " (not a date?)"))))),
+          h("div", { className: "field", style: { gridColumn: "1 / -1" } },
+            h("span", { className: "label" }, "Numbers to track"),
+            h("div", { className: "checks" }, t.columns.filter((c) => (c.kind === "numeric" || c.kind === "bool") && !c.timeFormat && !c.pk && !/(^id$|_id$|Id$|uuid)/.test(c.name) && c.name !== a.user_column).map((c) =>
+              h("label", { className: "check", key: c.name },
+                h("input", { type: "checkbox", checked: a.measures.includes(c.name), onChange: (e) => set((x) => {
+                  x.measures = e.target.checked ? [...x.measures, c.name] : x.measures.filter((v) => v !== c.name);
+                }) }), c.name))))
+        )
+      );
+    }),
+    unused.length > 0 && h("div", { className: "actions", style: { marginTop: 10 } },
+      h("select", { defaultValue: "", onChange: (e) => { if (e.target.value) { addActivity(e.target.value); e.target.value = ""; } }, style: { maxWidth: 320 } },
+        h("option", { value: "" }, "Add another activity table…"),
+        unused.map((t) => h("option", { key: t.name, value: t.name }, t.name))))
+  );
+}
+
+/* =============================================================================================
+ * Dashboard
+ * ===========================================================================================*/
+function Dashboard({ result, demo, onSelect }) {
+  const o = result.overview;
+  const users = result.users;
+  const [tier, setTier] = useState("All");
+  const [query, setQuery] = useState("");
+  const [hideChurned, setHideChurned] = useState(true);
+  const [shown, setShown] = useState(25);
+  const tableRef = useRef(null);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return users.filter((u) => {
+      if (tier === "Churned") return u.status === "churned";
+      if (hideChurned && u.status === "churned") return false;
+      if (tier !== "All" && (u.tier !== tier || u.status === "churned")) return false;
+      if (q && !String(u.userId).toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [users, tier, query, hideChurned]);
+  useEffect(() => setShown(25), [tier, query, hideChurned]);
+
+  const pickTier = (t) => { setTier(t); if (t === "Churned") setHideChurned(false); tableRef.current && tableRef.current.scrollIntoView({ behavior: "smooth", block: "start" }); };
+  const highCount = (o.tiers.find((t) => t.tier === "High") || {}).count || 0;
+  const q = o.quality || {};
+  const gradeColor = q.grade === "Good" ? "var(--low)" : q.grade === "Fair" ? "var(--medium)" : q.grade === "Weak" ? "var(--high)" : "var(--muted)";
+
+  return h("div", { className: "stack" },
+    demo && h("div", { className: "note" }, "You're viewing a precomputed example. Drop your own file from the start screen to analyse your data."),
+    h("div", { className: "grid g4" },
+      h(Kpi, { label: "Active users", value: fmtInt(o.activeUsers), detail: o.alreadyChurned ? `${fmtInt(o.alreadyChurned)} already churned` : "No one has churned yet" }),
+      h(Kpi, { label: `Expected to churn · next ${o.windowDays} days`, value: fmtInt(o.expectedChurners), detail: `${pct(o.expectedChurnRate)} of active users` }),
+      h(Kpi, { label: "High risk", value: fmtInt(highCount), detail: "70%+ chance of churning", onClick: () => pickTier("High") }),
+      h(Kpi, { label: "Prediction quality", value: h("span", { className: "grade", style: { color: gradeColor, fontSize: 22, padding: "2px 10px" } }, q.grade || "n/a"), detail: q.text })
+    ),
+    h("div", { className: "grid g2" },
+      h(RiskLevels, { o, tier, onPick: pickTier }),
+      h(Drivers, { o })
+    ),
+    h("section", { className: "box", ref: tableRef, "aria-label": "Users by churn risk" },
+      h("div", { className: "box-h" }, h("h2", null, "Users by churn risk"), h("span", { className: "sub" }, "Click a user to see why")),
+      h("div", { className: "toolbar" },
+        h("input", { type: "search", placeholder: "Search user id", value: query, onChange: (e) => setQuery(e.target.value), "aria-label": "Search user id" }),
+        h("div", { className: "seg", role: "group", "aria-label": "Filter by risk level" },
+          ["All", ...TIERS].map((t) => h("button", { key: t, "aria-pressed": tier === t, onClick: () => setTier(t) }, t))),
+        o.alreadyChurned > 0 && tier !== "Churned" && h("label", { className: "check small" },
+          h("input", { type: "checkbox", checked: hideChurned, onChange: (e) => setHideChurned(e.target.checked) }), "Hide users who already churned"),
+        h("span", { className: "spacer" }),
+        h("span", { className: "muted small num" }, `${fmtInt(filtered.length)} users`)
+      ),
+      filtered.length === 0
+        ? h("div", { className: "box-b center muted" }, "No users match these filters.")
+        : h(React.Fragment, null,
+            h("table", null,
+              h("thead", null, h("tr", null, h("th", null, "User"), h("th", null, "Churn risk"), h("th", null, "Level"), h("th", null, "Last active"), h("th", null, "Main reason"))),
+              h("tbody", null, filtered.slice(0, shown).map((u) =>
+                h("tr", { key: u.userId, tabIndex: 0, onClick: () => onSelect(u.userId),
+                  onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(u.userId); } } },
+                  h("td", { className: "uid" }, u.userId),
+                  h("td", { className: "c-risk" }, h("div", { className: "risk" },
+                    h("b", { className: "num" }, pct(u.risk)),
+                    h("span", { className: "t", "aria-hidden": true }, h("i", { style: { width: `${Math.max(1, u.risk * 100)}%`, background: tierColor(u.tier, u.status) } })))),
+                  h("td", null, h(Level, { tier: u.tier, status: u.status })),
+                  h("td", { className: "num" }, ago(u.recencyDays)),
+                  h("td", { className: "reason c-reason" }, u.status === "churned" ? "Already inactive" : (u.topReason || "—"))
+                )))
+            ),
+            h("div", { className: "more" },
+              shown < filtered.length && h("button", { className: "btn", onClick: () => setShown(shown + 25) }, "Show 25 more"),
+              h("span", { className: "muted small" }, `Showing ${fmtInt(Math.min(shown, filtered.length))} of ${fmtInt(filtered.length)}`)))
+    ),
+    h(Accuracy, { result })
+  );
+}
+
+function Kpi({ label, value, detail, onClick }) {
+  return h(onClick ? "button" : "div", {
+    className: "box kpi", onClick, style: onClick ? { textAlign: "left", cursor: "pointer" } : null,
+  },
+    h("div", { className: "label" }, label),
+    h("div", { className: "v num" }, value),
+    detail && h("div", { className: "d" }, detail));
+}
+
+function Level({ tier, status }) {
+  return h("span", { className: "lvl" }, h("i", { style: { background: tierColor(tier, status) } }), tierName(tier, status));
+}
+
+function RiskLevels({ o, tier, onPick }) {
+  const rows = [...o.tiers.map((t) => ({ name: t.tier, count: t.count, color: tierColor(t.tier, "active") }))];
+  if (o.alreadyChurned) rows.push({ name: "Churned", count: o.alreadyChurned, color: "var(--churned)", note: "already inactive" });
+  const total = rows.reduce((s, r) => s + r.count, 0) || 1;
+  const max = Math.max(...rows.map((r) => r.count), 1);
+  const biggest = o.tiers.slice().sort((a, b) => b.count - a.count)[0];
+  const title = biggest ? `Most active users are ${biggest.tier.toLowerCase()} risk` : "Users by risk level";
+  return h("section", { className: "box" },
+    h("div", { className: "box-h" }, h("h2", null, title), h("span", { className: "sub" }, "Click a bar to filter the list")),
+    h("div", { className: "box-b" },
+      rows.map((r) => h("div", {
+        key: r.name, className: "hbar clickable" + (tier === r.name ? " active" : ""), role: "button", tabIndex: 0,
+        onClick: () => onPick(r.name), onKeyDown: (e) => { if (e.key === "Enter") onPick(r.name); },
+        title: `${r.name}: ${r.count.toLocaleString()} users (${pct(r.count / total)})`,
+        "aria-label": `${r.name} risk: ${r.count} users, ${pct(r.count / total)}`,
+      },
+        h("span", { className: "hbar-name" }, h("span", { className: "swatch", style: { background: r.color } }), r.name, r.note ? h("span", { className: "muted small" }, ` · ${r.note}`) : null),
+        h("span", { className: "hbar-track" }, h("span", { className: "hbar-fill", style: { display: "block", width: `${(r.count / max) * 100}%`, background: r.color } })),
+        h("span", { className: "hbar-val num" }, `${fmtInt(r.count)}`, h("span", { className: "muted" }, ` · ${pct(r.count / total, 0)}`))
+      )),
+      h("div", { className: "muted small", style: { marginTop: 8 } }, "High = 70%+ chance of churning, Medium = 40–70%, Low = under 40%.")
+    )
+  );
+}
+
+function Drivers({ o }) {
+  const d = o.drivers || [];
+  const max = Math.max(...d.map((x) => x.share), 0.0001);
+  return h("section", { className: "box" },
+    h("div", { className: "box-h" }, h("h2", null, d.length ? `Biggest driver: ${d[0].name}` : "What drives churn"), h("span", { className: "sub" }, "Share of the model's decisions")),
+    h("div", { className: "box-b" },
+      d.length === 0
+        ? h("div", { className: "muted" }, "Driver analysis needs enough history to train a model. This run used a rule-of-thumb estimate.")
+        : d.map((x) => h("div", { key: x.key, className: "hbar", title: `${x.name}: ${pct(x.share)} of the model's decisions`, "aria-label": `${x.name}: ${pct(x.share)}` },
+            h("span", { className: "hbar-name" }, x.name),
+            h("span", { className: "hbar-track" }, h("span", { className: "hbar-fill", style: { display: "block", width: `${(x.share / max) * 100}%`, background: "var(--accent)" } })),
+            h("span", { className: "hbar-val num" }, pct(x.share)))),
+    )
+  );
+}
+
+function Accuracy({ result }) {
+  const m = (result.model && result.model.metrics) || {};
+  const s = result.summary || {};
+  const cd = s.churnDefinition || {};
+  const notes = (result.model && result.model.notes) || [];
+  const supervised = result.overview.supervised;
+  const rows = [
+    ["ROC-AUC", m.rocAuc, "How often a churner is ranked above a non-churner (0.5 = guessing, 1 = perfect)."],
+    ["Simple rule ROC-AUC", m.baselineRocAuc, "The same score for a simple “days since last visit” rule."],
+    ["Lift in top 10%", m.liftTop10 ? `${m.liftTop10.toFixed(1)}×` : null, "How much more often the riskiest 10% churn than average."],
+    ["Precision", m.precision, "Of users flagged Medium or High, the share who really churned."],
+    ["Recall", m.recall, "Of users who really churned, the share we flagged."],
+    ["Brier score", m.brier, "Average error of the probabilities (lower is better)."],
+  ];
+  return h("details", { className: "box acc" },
+    h("summary", null, "How accurate is this?"),
+    h("div", { className: "box-b stack" },
+      h("p", { style: { margin: 0 } }, h("b", null, "What churn means here. "), cd.description || ""),
+      supervised
+        ? h(React.Fragment, null,
+            h("p", { style: { margin: 0 } }, h("b", null, "How it was tested. "),
+              `The model learned from your history up to an earlier date, then predicted what happened next — data it had never seen (${m.validation || "held-out data"}).`),
+            h("p", { style: { margin: 0 } }, h("b", null, "Compared with a simple rule. "),
+              m.baselineRocAuc
+                ? `A rule based only on how recently and how often users were active scores ${m.baselineRocAuc.toFixed(2)}; this model scores ${m.rocAuc.toFixed(2)}.`
+                : "No baseline comparison was possible for this data."),
+            h("table", { className: "mtable" },
+              h("thead", null, h("tr", null, h("th", null, "Metric"), h("th", null, "Value"), h("th", null, "Meaning"))),
+              h("tbody", null, rows.map(([k, v, d]) => h("tr", { key: k },
+                h("td", null, k), h("td", { className: "num" }, typeof v === "number" ? v.toFixed(3) : (v || "n/a")), h("td", { className: "muted small" }, d))))))
+        : h("p", { style: { margin: 0 } }, "There wasn't enough history to train and test a model, so risk is estimated from each user's usual visit rhythm and how long they've been away."),
+      notes.length > 0 && h("div", { className: "note" }, notes.map((n, i) => h("div", { key: i }, n)))
+    )
+  );
+}
+
+/* =============================================================================================
+ * User panel
+ * ===========================================================================================*/
+function UserPanel({ id, fetchUser, windowDays, onClose }) {
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState("");
+  const [measure, setMeasure] = useState("");
+  const closeRef = useRef(null);
+
+  useEffect(() => {
+    let cancel = false;
+    setData(null); setErr("");
+    fetchUser(id).then((d) => { if (!cancel) setData(d); }).catch((e) => { if (!cancel) setErr(String(e.message || e)); });
+    return () => { cancel = true; };
+  }, [id, fetchUser]);
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    closeRef.current && closeRef.current.focus();
+    const prev = document.body.style.overflow; document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
+  }, [onClose]);
+
+  const maxEffect = data ? Math.max(...data.factors.map((f) => Math.abs(f.effect)), 0.0001) : 1;
+  const measures = data ? Object.keys(data.series.measures || {}) : [];
+
+  return h(React.Fragment, null,
+    h("div", { className: "scrim", onClick: onClose }),
+    h("aside", { className: "panel", role: "dialog", "aria-modal": true, "aria-label": `User ${id}` },
+      h("div", { className: "panel-h" },
+        h("div", { style: { minWidth: 0 } }, h("div", { className: "label" }, "User"), h("div", { className: "uid", style: { fontWeight: 700 } }, id)),
+        h("span", { className: "spacer" }),
+        h("button", { ref: closeRef, className: "btn sm", onClick: onClose, "aria-label": "Close" }, "✕ Close")),
+      err && h("div", { className: "panel-sec" }, h("div", { className: "note" }, err)),
+      !data && !err && h("div", { className: "panel-sec muted" }, "Loading…"),
+      data && h(React.Fragment, null,
+        h("div", { className: "panel-sec" },
+          h("div", { className: "label" }, data.status === "churned" ? "Status" : `Chance of churning in the next ${data.windowDays} days`),
+          h("div", { style: { display: "flex", alignItems: "baseline", gap: 14, marginTop: 6, flexWrap: "wrap" } },
+            data.status === "churned" ? h("div", { className: "bigrisk" }, "Churned") : h("div", { className: "bigrisk num", style: { color: tierColor(data.tier, data.status) } }, pct(data.risk)),
+            h(Level, { tier: data.tier, status: data.status })),
+          h("div", { className: "muted", style: { marginTop: 8 } }, `Last active ${ago(data.recencyDays)}`)
+        ),
+        h("div", { className: "panel-sec" },
+          h("div", { className: "label", style: { marginBottom: 6 } }, "Why"),
+          h("div", { style: { marginBottom: 8 } }, data.why),
+          data.factors.map((f) => h("div", { className: "factor", key: f.key, title: `${f.name}: ${f.effect > 0 ? "raises" : "lowers"} risk` },
+            h("span", { className: "arrow", style: { color: f.effect > 0 ? "var(--high)" : "var(--low)" }, "aria-label": f.effect > 0 ? "raises risk" : "lowers risk" }, f.effect > 0 ? "▲" : "▼"),
+            h("span", null, f.name, h("span", { className: "muted small" }, `  ·  ${fmtMetric(f.key, f.value)}`)),
+            h("span", { className: "ft" }, h("i", { style: { width: `${(Math.abs(f.effect) / maxEffect) * 100}%`, background: f.effect > 0 ? "var(--high)" : "var(--low)" } }))
+          )),
+          data.factors.length > 0 && h("div", { className: "muted small", style: { marginTop: 6 } }, "▲ raises risk · ▼ lowers risk · bar = strength")
+        ),
+        h("div", { className: "panel-sec" },
+          h("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" } },
+            h("div", { className: "label" }, `Activity · last ${data.series.activity.length} days`),
+            h("span", { className: "spacer" }),
+            measures.length > 0 && h("select", { value: measure, onChange: (e) => setMeasure(e.target.value), style: { width: "auto", minHeight: 30 } },
+              h("option", { value: "" }, "Events per day"),
+              measures.map((m) => h("option", { key: m, value: m }, m.replace(".", " · ").replace(/_/g, " "))))),
+          h(ActivityChart, { series: data.series, measure, windowDays: data.windowDays || windowDays })
+        ),
+        data.metrics.length > 0 && h("div", { className: "panel-sec" },
+          h("div", { className: "label", style: { marginBottom: 8 } }, "Details"),
+          h("div", { className: "mgrid" }, data.metrics.map((m) =>
+            h("div", { key: m.key }, h("div", { className: "muted small" }, m.name), h("div", { className: "mv num" }, fmtMetric(m.key, m.value))))))
+      )
+    )
+  );
+}
+
+function ActivityChart({ series, measure, windowDays }) {
+  const values = measure ? (series.measures[measure] || []) : series.activity;
+  const n = values.length;
+  const W = 480, H = 172, padL = 32, padB = 22, padT = 20;
+  const max = Math.max(...values, 1);
+  const bw = (W - padL) / Math.max(n, 1);
+  const start = series.start ? new Date(series.start + "T00:00:00Z") : null;
+  const dayLabel = (i) => start ? new Date(start.getTime() + i * 86400000).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" }) : "";
+  const shadeFrom = Math.max(0, n - (windowDays || 0));
+  const active = values.filter((v) => v > 0).length;
+  const desc = `${active} active days out of ${n}. ${measure ? "Daily average of " + measure : "Events per day"}, highest ${Math.round(max * 10) / 10}.`;
+  const [hover, setHover] = useState(null);
+  return h("div", null,
+    h("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", role: "img", "aria-label": desc, style: { display: "block" }, onMouseLeave: () => setHover(null) },
+      windowDays ? h("rect", { x: padL + shadeFrom * bw, y: padT, width: (n - shadeFrom) * bw, height: H - padB - padT, fill: "var(--shade)" }) : null,
+      h("line", { x1: padL, x2: W, y1: H - padB, y2: H - padB, stroke: "var(--border-strong)" }),
+      h("line", { x1: padL, x2: W, y1: padT, y2: padT, stroke: "var(--border)", strokeDasharray: "2 3" }),
+      h("text", { x: padL - 4, y: padT + 4, textAnchor: "end" }, String(Math.round(max * 10) / 10)),
+      h("text", { x: padL - 4, y: H - padB + 4, textAnchor: "end" }, "0"),
+      values.map((v, i) => {
+        const bh = (v / max) * (H - padB - padT);
+        return h("rect", { key: i, x: padL + i * bw + 0.5, y: H - padB - bh, width: Math.max(bw - 1, 1), height: Math.max(bh, 0),
+          fill: hover === i ? "var(--text)" : "var(--accent)", onMouseEnter: () => setHover(i) });
+      }),
+      values.map((v, i) => h("rect", { key: "hit" + i, x: padL + i * bw, y: padT, width: bw, height: H - padB - padT, fill: "transparent",
+        onMouseEnter: () => setHover(i), onClick: () => setHover(i) })),
+      [0, Math.floor((n - 1) / 2), n - 1].map((i) => h("text", { key: "x" + i, x: padL + i * bw + bw / 2, y: H - 6, textAnchor: i === 0 ? "start" : i === n - 1 ? "end" : "middle" }, dayLabel(i))),
+      windowDays ? h("text", { x: W - 2, y: 12, textAnchor: "end" }, `churn window: last ${windowDays} days`) : null
+    ),
+    h("div", { className: "muted small", style: { minHeight: 18, marginTop: 4 } },
+      hover !== null ? `${dayLabel(hover)}: ${Math.round(values[hover] * 100) / 100} ${measure ? "" : "events"}` : (windowDays ? "Shaded: the churn window. No activity across it counts as churn." : ""))
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(h(App));
+</script>
+</body>
+</html>

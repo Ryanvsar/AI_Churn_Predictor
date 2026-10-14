@@ -1,0 +1,7 @@
+**/__pycache__
+.git
+tests
+legacy
+sample_data
+uploads
+*.db

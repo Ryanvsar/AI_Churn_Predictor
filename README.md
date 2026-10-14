@@ -1,21 +1,27 @@
 #  ML Churn Predictor
 
-A full-stack web app that predicts which users of **any app** are about to churn. Point it at your app's database — a Duolingo-style learning app, a Waze-style navigation app, a SaaS product, a game — and it:
+A web app that predicts which users of **any app** are about to churn. Drop in your app's database (a Duolingo-style learning app, a Waze-style navigation app, a SaaS product, a game) and get a churn dashboard in about a minute:
 
-1. **Understands the database on its own**: finds the users table, the activity tables, the timestamp columns (in whatever format they're stored), numeric measures and categories.
-2. **Defines churn from your app's usage rhythm** (e.g. "no activity for 7 days" for a daily-habit app), or uses your own churn label column if you have one.
-3. **Trains and validates an XGBoost model** on past snapshots of your data, then scores every active user with a calibrated churn probability.
-4. **Explains every prediction** and serves it all through a FastAPI backend and React dashboard: risk leaderboard, per-user deep dive, aggregate insights.
+- **Headline numbers:** how many active users, how many are expected to churn in the next N days, how many are high-risk, and how trustworthy the prediction is.
+- **Charts:** users by risk level and the biggest churn drivers.
+- **At-risk users:** a searchable list showing each user's risk, last activity and main reason, exportable to CSV.
+- **User panel:** a per-user explanation and activity chart.
 
-Everything runs locally with open-source libraries. There are **no API keys, no LLM calls and no paid services**; schema understanding uses heuristics and statistics.
+Under the hood it:
+1. **Understands the database on its own.** It finds the users table, the activity tables, the timestamp columns (in whatever format they're stored), numeric measures and categories.
+2. **Defines churn from your app's usage rhythm**, for example "no activity for 7 days" for a daily-habit app, or uses your own churn label column.
+3. **Trains and validates an XGBoost model** on past snapshots of your data, then scores every active user with a calibrated probability.
+
+It uses only open-source tools: **no API keys, no LLM calls and no paid services.**
 
 ---
 
 ## 📋 Table of Contents
 
-- [Features](#features)
-- [Quick start](#quick-start)
-- [Connecting your database](#connecting-your-database)
+- [Deploy to Vercel (free)](#deploy-to-vercel-free)
+- [Run it locally](#run-it-locally)
+- [Self-host with live database connections](#self-host-with-live-database-connections)
+- [What data it needs](#what-data-it-needs)
 - [How it understands a database](#how-it-understands-a-database)
 - [How churn is defined](#how-churn-is-defined)
 - [The model](#the-model)
@@ -26,56 +32,74 @@ Everything runs locally with open-source libraries. There are **no API keys, no 
 
 ---
 
-## Features
+## Deploy to Vercel (free)
 
-| Feature | Description |
-|---|---|
-| 🔌 **Any relational database** | SQLite, PostgreSQL, MySQL/MariaDB, SQL Server, Oracle (via SQLAlchemy), plus CSV / Parquet / Excel files, folders and `.zip` archives. The source is only read, never modified. |
-| 🧭 **Automatic schema detection** | Finds users, activity tables, join paths (foreign keys, column names, value overlap, or one join hop), timestamps, measures and categories, each with a confidence score and a reason. |
-| ✏️ **Reviewable mapping** | Every detected choice can be changed in the UI and saved as a reusable mapping. |
-| ⏱️ **Data-driven churn definition** | The churn window is inferred from how often users come back. It can be overridden, or you can use an explicit label column. |
-| 🎯 **Honest accuracy** | Time-travel training snapshots, temporal validation, a recency-only baseline comparison and calibrated probabilities. |
-| 🏆 **Risk leaderboard** | Users ranked by churn probability with Low / Medium / High tiers; users who already churned are shown separately. |
-| 🔍 **User deep dive** | Probability, top risk drivers (TreeSHAP), key metrics, and daily activity / measure charts. |
-| 📊 **Aggregate insights** | Group averages by risk tier and global feature importance. |
-| ⚙️ **Background jobs** | Analysis runs asynchronously with live progress. |
+The site in `site/` is fully static. The Python pipeline runs **in each visitor's browser** using [Pyodide](https://pyodide.org) (Python compiled to WebAssembly), so:
+
+- **Free hosting** that scales to any number of visitors, with no servers to run or pay for.
+- **Privacy:** a visitor's file is never uploaded; it is analysed on their own computer.
+- **No upload limits** beyond the visitor's browser memory.
+
+**To deploy:**
+1. Push this repository to GitHub.
+2. In Vercel: **Add New → Project**, import the repository, and click **Deploy**.
+
+`vercel.json` already tells Vercel to serve `site/` with no build step, and `.vercelignore` keeps everything else out of the upload. Or, from a terminal:
+
+```bash
+npx vercel deploy --prod
+```
+
+Any static host works the same way (Netlify, Cloudflare Pages, GitHub Pages, S3): publish the `site/` folder.
+
+**Good to know:**
+- **First load:** the first analysis on a device downloads the engine (about 30 MB, from jsDelivr). Later visits load it from the browser cache.
+- **Speed:** a few thousand users take about 10–60 seconds, depending on the data and the device.
+- **Large files:** above 50,000 users, a random sample of 50,000 is analysed, and the dashboard says so.
+- **Accepted files:** SQLite, CSV, TSV, Excel, Parquet, or a `.zip` of them. A browser can't connect to a live database; for that, self-host (below).
+- **Updating:** after changing anything in `backend/`, run `python -m web.build` and commit `site/`. A test fails if the bundled Python code is out of date.
 
 ---
 
-## Quick start
+## Run it locally
 
 ```bash
 pip install -r requirements.txt
-
-# Optional: generate three realistic demo apps (+ hidden "future" data for accuracy checks)
-python -m simulator.generate --all            # writes sample_data/*.db
-
-# Start the backend (also serves the dashboard)
-uvicorn backend.app:app --reload --port 8000
+uvicorn backend.app:app --port 8000      # then open http://localhost:8000
 ```
 
-Open **http://localhost:8000/ui** and follow the three steps:
+When the page is served by this backend, it analyses on the server instead of in the browser. That makes it faster for big files and adds live database connections. To try the pure-browser version locally instead:
 
-1. Enter a file path or database URL (or upload a file) and click **Detect schema**.
-2. Review the detected mapping.
-3. Click **Run Churn Analysis**.
-
-The bundled `app_usage.db` (the original demo database) works out of the box.
+```bash
+python -m http.server 8000 --directory site
+```
 
 ---
 
-## Connecting your database
+## Self-host with live database connections
 
-| Source | What to enter |
+The same UI, backed by the FastAPI server, can connect straight to a database:
+
+```bash
+docker build -t churn-predictor .
+docker run -p 8000:8000 churn-predictor           # http://localhost:8000
+```
+
+This works on Render, Fly.io, Railway or any machine that runs Docker. On the start screen, choose **Connect with a database URL instead**:
+
+| Database | URL |
 |---|---|
-| SQLite | `path/to/app.db` |
-| PostgreSQL | `postgresql://user:password@host:5432/dbname` (`pip install "psycopg[binary]"`) |
-| MySQL / MariaDB | `mysql+pymysql://user:password@host:3306/dbname` (`pip install pymysql`) |
-| SQL Server | `mssql+pyodbc://user:password@dsn` (`pip install pyodbc`) |
-| Oracle | `oracle+oracledb://user:password@host:1521/?service_name=svc` (`pip install oracledb`) |
-| CSV / Parquet | a file, or a folder where each file is a table (e.g. `users.csv`, `events.csv`) |
-| Excel | `export.xlsx` (each sheet is a table) |
-| Archive | `export.zip` containing any of the above |
+| PostgreSQL | `postgresql://user:password@host:5432/dbname` |
+| MySQL / MariaDB | `mysql+pymysql://user:password@host:3306/dbname` |
+| SQL Server | `mssql+pyodbc://user:password@dsn` (add `pyodbc`) |
+| Oracle | `oracle+oracledb://user:password@host:1521/?service_name=svc` (add `oracledb`) |
+| SQLite on the server | `sqlite:///path/to/app.db` |
+
+The database is only ever read, never modified.
+
+---
+
+## What data it needs
 
 **Minimum requirement:** at least one table with a **user identifier** and a **timestamp** per row, such as sessions, events, lessons, trips or orders. Everything else is optional and improves accuracy:
 - a users table (signup date, plan, country…)
@@ -83,6 +107,8 @@ The bundled `app_usage.db` (the original demo database) works out of the box.
 - numeric measures (duration, xp, distance, amount…)
 - categories (event type, feature, lesson type…)
 - a churn label
+
+If something is detected wrongly, click **Adjust** on the "Here's what we found" screen to pick the right users table, activity tables, date columns or churn window.
 
 ---
 
@@ -131,7 +157,7 @@ Most app databases have no churn column, so churn is defined behaviourally:
 **Training** (`backend/model/train_and_score.py`):
 - XGBoost with early stopping and a small hyper-parameter search
 - Validation on the **most recent snapshot**, with training on earlier ones (a true out-of-time test). With explicit labels or only one snapshot, a held-out 25% of users is used instead.
-- Probabilities calibrated with isotonic or Platt scaling
+- Probabilities calibrated with Platt scaling, kept between 0.5% and 99%
 - The final model is refit on all snapshots before scoring
 - If there is too little history to build labelled snapshots, a cadence-based heuristic score is used instead (an exponential survival model on each user's own gap between visits). The run is flagged as unsupervised.
 
@@ -147,13 +173,15 @@ Most app databases have no churn column, so churn is defined behaviourally:
 
 | Database (3,000 users) | Schema quirks | Churn window | ROC-AUC on real future | Recency baseline (validation) | Predicted vs actual churn rate |
 |---|---|---|---|---|---|
-| `learning_app` (Duolingo-like) | ISO timestamps with time zone, FKs, 2 activity tables | 7 days (auto) | **0.90** | 0.86 | 4.4% vs 4.0% |
+| `learning_app` (Duolingo-like) | ISO timestamps with time zone, FKs, 2 activity tables | 7 days (auto) | **0.90** | 0.86 | 4.5% vs 4.0% |
 | `navigation_app` (Waze-like) | UUID ids, Unix ms/s timestamps, **no foreign keys** | 7 days (auto) | **0.85** | 0.85 | 8.5% vs 8.9% |
-| `saas_app` (B2B SaaS) | events reach accounts only **via sessions** | 7 days (auto) | **0.88** | 0.81 | 7.1% vs 5.6% |
+| `saas_app` (B2B SaaS) | events reach accounts only **via sessions** | 7 days (auto) | **0.89** | 0.81 | 7.2% vs 5.6% |
 | `saas_app` loaded into **PostgreSQL** | native `TIMESTAMPTZ`, real FK constraints | 7 days (auto) | **0.88** | 0.81 | — |
 | `app_usage.db` (original demo) | `YYYYMMDD` ints, `churnLabel` column | label column | **0.96** (held-out users) | 0.64 | — |
 
 The previous version scored users with the same model it had trained on, so its numbers were in-sample. All numbers above are out-of-sample.
+
+The in-browser engine runs the identical Python code (XGBoost 2.1 in Pyodide) with a smaller hyper-parameter search, so it can run in a browser. On the original demo it reaches the same AUC (0.96).
 
 ---
 
@@ -161,12 +189,15 @@ The previous version scored users with the same model it had trained on, so its 
 
 | Method & path | Purpose |
 |---|---|
-| `GET /health` | Health check |
+| `GET /health`, `GET /engine.json` | Health check; `engine.json` tells the web UI to use this server |
 | `POST /db/validate` `{source}` | Profile a database and return tables, capabilities and the detected `schemaMap` (`dbPath` is accepted as an alias of `source`) |
 | `POST /db/upload` (multipart) | Upload a `.db` / `.csv` / `.parquet` / `.xlsx` / `.zip`; returns a path to analyse |
 | `GET /mappings`, `GET /mappings/{name}`, `POST /mappings` | List, load and save schema mappings |
 | `POST /analysis/run` | Start a job. Options: `source`, `threshold`, `highRiskThreshold`, `schemaMap`, `churnWindowDays`, `labelSource` (`auto`/`explicit`/`derived`), `maxUsers`, `observationStart`, `observationEnd` |
 | `GET /analysis/jobs/{id}` | Status, progress, churn definition and metrics |
+| `GET /analysis/{id}/result` | Everything the dashboard shows: overview numbers, all users (risk, level, last active, main reason), model info |
+| `GET /analysis/{id}/export.csv` | All predictions as CSV |
+| `GET /analysis/{id}/users/{userId}/bundle` | Everything the user panel shows |
 | `GET /analysis/{id}/users?top=&threshold=&sort=&includeChurned=` | Risk leaderboard |
 | `GET /analysis/{id}/users/{userId}` | One user's probability, tier, status and metrics |
 | `GET /analysis/{id}/users/{userId}/explain` | Top risk factors and a summary |
@@ -181,8 +212,17 @@ User ids are strings, so integer, UUID and text ids all work.
 ## Project structure
 
 ```
+site/                        The web app, deployed as-is to Vercel / any static host
+  index.html                 Dashboard UI (React, no build step)
+  worker.js                  In-browser engine: runs the Python pipeline with Pyodide
+  py/churn_backend.zip       The backend/ package for the browser (generated)
+  demo/*.json                Precomputed example results (generated)
+web/build.py                 Regenerates site/py and site/demo
+vercel.json, .vercelignore   Vercel deployment settings
+Dockerfile                   Self-hosted server image
 backend/
-  app.py                     FastAPI routes; serves the dashboard at /ui
+  app.py                     FastAPI routes; also serves site/
+  service.py                 JSON results shared by the server and the browser engine
   connectors/source.py       Open any SQLAlchemy URL / SQLite / CSV / Parquet / Excel / zip read-only
   schema/
     introspect.py            Tables, keys, foreign keys, column profiles
@@ -199,7 +239,6 @@ backend/
   pipeline/run.py            End-to-end analysis orchestration
   jobs/                      Background job runner and store
   schemas/api.py             Pydantic request/response models
-frontend/index.html          React dashboard (single file, no build step)
 simulator/
   generate.py                Three schema-diverse demo apps with hidden future data
   evaluate.py                Score predictions against the real future
@@ -223,6 +262,7 @@ The suite (about 2 minutes) generates the demo apps and checks:
 - that features never use data after their cutoff
 - out-of-sample accuracy against hidden future data, beating the baseline and with calibrated probabilities
 - the full API flow, including mapping overrides, uploads and UUID user ids
+- that the bundled browser code in `site/` matches `backend/`, and that the demo data is valid
 
 ---
 

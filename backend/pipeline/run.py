@@ -26,6 +26,7 @@ class AnalysisOptions:
     threshold: float = 0.4
     high_risk_threshold: float = 0.7
     max_users: Optional[int] = None
+    quick: bool = False  # faster, slightly smaller model search (used by the in-browser engine)
     observation_start: Optional[object] = None  # date-like; YYYYMMDD ints accepted
     observation_end: Optional[object] = None  # "as of" date for scoring
 
@@ -64,7 +65,12 @@ def _snapshot_frame(data, spec, cutoff, labels: pd.DataFrame) -> pd.DataFrame:
 
 def run_analysis(opts: AnalysisOptions, progress: Callable[[float, str], None] = lambda p, m: None) -> AnalysisResult:
     notes: List[str] = []
-    config = ModelConfig(threshold=opts.threshold, high_risk_threshold=opts.high_risk_threshold)
+    config = ModelConfig(
+        threshold=opts.threshold,
+        high_risk_threshold=opts.high_risk_threshold,
+        quick=opts.quick,
+        max_snapshots=8 if opts.quick else 12,
+    )
 
     progress(0.05, "Reading database structure")
     source = open_source(opts.source)
@@ -80,6 +86,8 @@ def run_analysis(opts: AnalysisOptions, progress: Callable[[float, str], None] =
     progress(0.15, "Extracting activity")
     use_label = opts.label_source in ("auto", "explicit")
     data = extract(source, smap, max_users=opts.max_users, use_label=use_label)
+    if opts.max_users and len(data.users) >= opts.max_users:
+        notes.append(f"Large file: analysed a random sample of {opts.max_users:,} users.")
     data = clip_time(data, _to_ts(opts.observation_start), _to_ts(opts.observation_end))
 
     days = cd.activity_days([af.df for af in data.activities.values()])
